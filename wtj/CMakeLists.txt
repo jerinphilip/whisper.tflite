@@ -2,7 +2,7 @@
 
 find_package(JNI REQUIRED)
 
-set(SOURCES TFLiteEngine.cpp TFLiteEngineJNI.cpp whisper.cpp)
+set(SOURCES TFLiteEngine.cpp TFLiteEngineJNI.cpp whisper.cpp wav_util.cpp)
 set(EXT_LIBS tensorflow-lite JNI::JNI)
 set(TFLITE_INCLUDE_DIRS
     "${CMAKE_SOURCE_DIR}/deps/tensorflow/"
