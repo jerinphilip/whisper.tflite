@@ -1,1 +1,1 @@
-add_subdirectory(tensorflow/tensorflow/lite)
+add_subdirectory(tensorflow/tensorflow/lite EXCLUDE_FROM_ALL)
