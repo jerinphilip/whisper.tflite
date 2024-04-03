@@ -24,14 +24,16 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "input_features.h"
+#define DR_WAV_IMPLEMENTATION
+#include "dr_libs/dr_wav.h"
 #include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
 #include "tensorflow/lite/kernels/register.h"
-#include "tflt-vocab-mel.h"
-#include "whisper.h"
+#include "whisper.tflite/input_features.h"
+#include "whisper.tflite/tflt-vocab-mel.h"
+#include "whisper.tflite/whisper.h"
 
 #define TFLITE_MINIMAL_CHECK(x)                              \
   if (!(x)) {                                                \
@@ -66,9 +68,10 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   const char* filename = argv[1];
-  WhisperMelSpectrogram mel;  // Use the correct struct from whisper.h
+  WhisperMel mel;  // Use the correct struct from whisper.h
   struct timeval start_time;
   struct timeval end_time;
+  WhisperVocab vocab;
 
   // Create a pointer to the start of the unsigned char array
   unsigned char* ptr = tflt_vocab_mel_bin;
@@ -84,24 +87,25 @@ int main(int argc, char* argv[]) {
 
   WhisperFilters filters;  // Use the correct struct from whisper.h
   // Load mel filters
-  memcpy(&filters.numMel, ptr, sizeof(filters.numMel));
-  ptr += sizeof(filters.numMel);
+  memcpy(&filters.n_mel, ptr, sizeof(filters.n_mel));
+  ptr += sizeof(filters.n_mel);
 
-  memcpy(&filters.numFFT, ptr, sizeof(filters.numFFT));
-  ptr += sizeof(filters.numFFT);
+  memcpy(&filters.n_fft, ptr, sizeof(filters.n_fft));
+  ptr += sizeof(filters.n_fft);
 
   // Allocate memory for the vector and copy data
-  filters.data.resize(filters.numMel * filters.numFFT);
+  filters.data.resize(filters.n_mel * filters.n_fft);
   memcpy(filters.data.data(), ptr,
-         filters.numMel * filters.numFFT * sizeof(float));
-  ptr += filters.numMel * filters.numFFT * sizeof(float);
+         filters.n_mel * filters.n_fft * sizeof(float));
+  ptr += filters.n_mel * filters.n_fft * sizeof(float);
 
   // Load vocab
   int32_t n_vocab = 0;
   memcpy(&n_vocab, ptr, sizeof(n_vocab));
   ptr += sizeof(n_vocab);
 
-  gVocab.numTokens = n_vocab;  // Update the vocabulary size based on whisper.h
+  // Update the vocabulary size based on whisper.h
+  vocab.n_vocab_additional = n_vocab;
   printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
 
   char word[256];  // Assuming a maximum word length of 255 characters
@@ -114,7 +118,7 @@ int main(int argc, char* argv[]) {
     word[len] = '\0';  // Null-terminate the string
     ptr += len;
 
-    gVocab.idToToken[i] = std::string(word);
+    vocab.id_to_token[i] = std::string(word);
   }
 
   // Generate input_features for Audio file
@@ -171,18 +175,18 @@ int main(int argc, char* argv[]) {
 
     // Hack if the audio file size is less than 30ms, append with 0's
     pcmf32.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
-    if (!logMelSpectrogram(pcmf32.data(), pcmf32.size(), kWhisperSampleRate,
-                           kWhisperNFFT, kWhisperHopLength, kWhisperNMEL, 1,
-                           filters, mel)) {
+    if (!log_mel_spectrogram(pcmf32.data(), pcmf32.size(), kWhisperSampleRate,
+                             kWhisperNFFT, kWhisperHopLength, kWhisperNMEL, 1,
+                             filters, mel)) {
       fprintf(stderr, "%s: failed to compute mel spectrogram\n", __func__);
       return -1;
     }
 
     printf("\nmel.n_len%d\n",
-           mel.numFrames);  // Update to use the correct struct members
+           mel.n_len);  // Update to use the correct struct members
     printf("\nmel.n_mel:%d\n",
-           mel.numMelFilters);  // Update to use the correct struct members
-  }                             // end of audio file processing
+           mel.n_mel);  // Update to use the correct struct members
+  }                     // end of audio file processing
 
   // Load tflite model
   std::unique_ptr<tflite::FlatBufferModel> model =
@@ -211,7 +215,7 @@ int main(int argc, char* argv[]) {
   } else if (argc == 3) {
     // Use the processed audio data as input
     memcpy(input, mel.data.data(),
-           mel.numMelFilters * mel.numFrames *
+           mel.n_mel * mel.n_len *
                sizeof(float));  // Update to use the correct struct members
   }
 
@@ -228,13 +232,17 @@ int main(int argc, char* argv[]) {
   auto output_size = output_dims->data[output_dims->size - 1];
   int* output_int = interpreter->typed_output_tensor<int>(0);
   std::string text;
+  auto decode = [&vocab](int token) {
+    // Empty
+    return vocab.id_to_token.at(token).c_str();
+  };
 
   for (int i = 0; i < output_size; i++) {
-    if (output_int[i] == gVocab.tokenEOT) {
+    if (output_int[i] == vocab.token_eot) {
       break;
     }
-    if (output_int[i] < gVocab.tokenEOT) {
-      text += whisperTokenToString(output_int[i]);
+    if (output_int[i] < vocab.token_eot) {
+      text += decode(output_int[i]);
     }
   }
 

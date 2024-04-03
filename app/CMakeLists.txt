@@ -14,7 +14,7 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 add_executable(minimal minimal.cc)
-target_link_libraries(minimal tensorflow-lite)
+target_link_libraries(minimal tensorflow-lite audioEngine)
 target_include_directories(
   minimal PUBLIC "${CMAKE_SOURCE_DIR}/deps" ${TFLITE_INCLUDE_DIRS}
-                 "${CMAKE_SOURCE_DIR}/minimal")
+                 "${CMAKE_SOURCE_DIR}/minimal" "${CMAKE_SOURCE_DIR}/")

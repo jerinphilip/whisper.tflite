@@ -8,7 +8,6 @@
 // Print a vector of float values
 void print(const std::vector<float>& a) {
   std::cout << "The vector elements are: ";
-
   for (float i : a) std::cout << i << ' ';
 }
 
@@ -85,11 +84,10 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
 }
 
 // Log mel spectrogram computation
-bool log_mel_spectrogram(const float* samples, const int n_samples,
-                         const int /*sample_rate*/, const int fft_size,
-                         const int fft_step, const int n_mel,
-                         const int n_threads, const whisper_filters& filters,
-                         whisper_mel& mel) {
+bool log_mel_spectrogram(const float* samples, int n_samples,
+                         int /*sample_rate*/, int fft_size, int fft_step,
+                         int n_mel, int n_threads, WhisperFilters& filters,
+                         WhisperMel& mel) {
   std::vector<float> hann;
   hann.resize(fft_size);
 

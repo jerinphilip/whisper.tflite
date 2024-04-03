@@ -11,21 +11,23 @@ class TFLiteEngine {
   TFLiteEngine() = default;
   ~TFLiteEngine() = default;
 
-  int loadModel(const char* modelPath, const bool isMultilingual);
+  // NOLINTBEGIN(readability-identifier-naming)
+  int loadModel(const char* modelPath, bool isMultilingual);
   void freeModel();
 
   std::string transcribeBuffer(std::vector<float> samples);
   std::string transcribeFile(const char* waveFile);
+  // NOLINTEND(readability-identifier-naming)
 
  private:
   // Convert a token to a string
   const char* decode(int token) { return vocab_.id_to_token.at(token).c_str(); }
 
   // Add any private members or helper functions as needed
-  whisper_tflite whisper_;
-  whisper_vocab vocab_;
-  whisper_filters filters_;
-  whisper_mel mel_;
+  WhisperTFLite whisper_;
+  WhisperVocab vocab_;
+  WhisperFilters filters_;
+  WhisperMel mel_;
 };
 
 #endif  // _TFLITEENGINE_H_

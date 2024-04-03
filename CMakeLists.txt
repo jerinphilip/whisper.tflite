@@ -4,5 +4,4 @@ project(TFLiteEngine VERSION 1.0)
 
 add_subdirectory(deps)
 add_subdirectory(whisper.tflite)
-# add_subdirectory(minimal)
 add_subdirectory(app)
