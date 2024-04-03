@@ -1,10 +1,17 @@
 #include "whisper.h"
 
+#include <math.h>
+
+#include <cmath>
+#include <iostream>
+#include <thread>
+#include <vector>
+
 // Print a vector of float values
 void print(const std::vector<float>& a) {
   std::cout << "The vector elements are: ";
 
-  for (int i = 0; i < a.size(); i++) std::cout << a.at(i) << ' ';
+  for (float i : a) std::cout << i << ' ';
 }
 
 // Convert a token to a string
@@ -14,17 +21,17 @@ const char* whisper_token_to_str(int token) {
 
 // Naive Discrete Fourier Transform
 void dft(const std::vector<float>& in, std::vector<float>& out) {
-  int N = in.size();
-  out.resize(N * 2);
+  int n = in.size();
+  out.resize(n * 2);
 
-  for (int k = 0; k < N; k++) {
+  for (int k = 0; k < n; k++) {
     float re = 0;
     float im = 0;
 
-    for (int n = 0; n < N; n++) {
-      float angle = 2 * M_PI * k * n / N;
-      re += in[n] * cos(angle);
-      im -= in[n] * sin(angle);
+    for (int n = 0; n < n; n++) {
+      float angle = 2 * M_PI * k * n / n;
+      re += in[n] * std::cos(angle);
+      im -= in[n] * std::sin(angle);
     }
 
     out[k * 2 + 0] = re;
@@ -36,15 +43,15 @@ void dft(const std::vector<float>& in, std::vector<float>& out) {
 void fft(const std::vector<float>& in, std::vector<float>& out) {
   out.resize(in.size() * 2);
 
-  int N = in.size();
+  int n = in.size();
 
-  if (N == 1) {
+  if (n == 1) {
     out[0] = in[0];
     out[1] = 0;
     return;
   }
 
-  if (N % 2 == 1) {
+  if (n % 2 == 1) {
     dft(in, out);
     return;
   }
@@ -52,7 +59,7 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
   std::vector<float> even;
   std::vector<float> odd;
 
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < n; i++) {
     if (i % 2 == 0) {
       even.push_back(in[i]);
     } else {
@@ -66,11 +73,11 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
   fft(even, even_fft);
   fft(odd, odd_fft);
 
-  for (int k = 0; k < N / 2; k++) {
-    float theta = 2 * M_PI * k / N;
+  for (int k = 0; k < n / 2; k++) {
+    float theta = 2 * M_PI * k / n;
 
-    float re = cos(theta);
-    float im = -sin(theta);
+    float re = std::cos(theta);
+    float im = -std::sin(theta);
 
     float re_odd = odd_fft[2 * k + 0];
     float im_odd = odd_fft[2 * k + 1];
@@ -78,14 +85,14 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
     out[2 * k + 0] = even_fft[2 * k + 0] + re * re_odd - im * im_odd;
     out[2 * k + 1] = even_fft[2 * k + 1] + re * im_odd + im * re_odd;
 
-    out[2 * (k + N / 2) + 0] = even_fft[2 * k + 0] - re * re_odd + im * im_odd;
-    out[2 * (k + N / 2) + 1] = even_fft[2 * k + 1] - re * im_odd - im * re_odd;
+    out[2 * (k + n / 2) + 0] = even_fft[2 * k + 0] - re * re_odd + im * im_odd;
+    out[2 * (k + n / 2) + 1] = even_fft[2 * k + 1] - re * im_odd - im * re_odd;
   }
 }
 
 // Log mel spectrogram computation
 bool log_mel_spectrogram(const float* samples, const int n_samples,
-                         const int sample_rate, const int fft_size,
+                         const int /*sample_rate*/, const int fft_size,
                          const int fft_step, const int n_mel,
                          const int n_threads, const whisper_filters& filters,
                          whisper_mel& mel) {

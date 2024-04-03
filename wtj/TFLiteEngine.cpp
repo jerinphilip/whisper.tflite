@@ -1,27 +1,32 @@
 #include "TFLiteEngine.h"
 
+#include <bits/types/struct_timeval.h>
 #include <sys/time.h>
 
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <string>
+#include <thread>
 #include <vector>
 
+#include "core/interpreter_builder.h"
+#include "core/model_builder.h"
 #include "filters_vocab_en.h"
 #include "filters_vocab_multilingual.h"
 #include "input_features.h"
+#include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
-#include "tensorflow/lite/delegates/gpu/delegate.h"
-#include "tensorflow/lite/kernels/register.h"
-#include "tensorflow/lite/model.h"
-#include "tensorflow/lite/optional_debug_tools.h"
 #include "wav_util.h"
 #include "whisper.h"
 
-#define INFERENCE_ON_AUDIO_FILE 1
-#define TIME_DIFF_MS(start, end)                                              \
-  (((end.tv_sec - start.tv_sec) * 1000000) + (end.tv_usec - start.tv_usec)) / \
-      1000
+enum { INFERENCE_ON_AUDIO_FILE = 1 };
+#define TIME_DIFF_MS(start, end)                  \
+  (((((end).tv_sec - (start).tv_sec) * 1000000) + \
+    ((end).tv_usec - (start).tv_usec)) /          \
+   1000)
 #define TFLITE_MINIMAL_CHECK(x)                            \
   if (!(x)) {                                              \
     fprintf(stderr, "Error at %s:%d", __FILE__, __LINE__); \
@@ -29,61 +34,62 @@
   }
 
 int TFLiteEngine::loadModel(const char *modelPath, const bool isMultilingual) {
-  std::cout << "Entering " << __func__ << "()" << std::endl;
+  std::cout << "Entering " << __func__ << "()" << '\n';
 
-  timeval start_time{}, end_time{};
+  timeval start_time{};
+  timeval end_time{};
   if (!g_whisper_tflite.is_whisper_tflite_initialized) {
-    gettimeofday(&start_time, NULL);
-    std::cout << "Initializing TFLite..." << std::endl;
+    gettimeofday(&start_time, nullptr);
+    std::cout << "Initializing TFLite..." << '\n';
 
     /////////////// Load filters and vocab data ///////////////
 
-    const char *vocabData = nullptr;
+    const char *vocab_data = nullptr;
     if (isMultilingual)
-      vocabData = reinterpret_cast<const char *>(filters_vocab_multilingual);
+      vocab_data = reinterpret_cast<const char *>(filters_vocab_multilingual);
     else
-      vocabData = reinterpret_cast<const char *>(filters_vocab_en);
+      vocab_data = reinterpret_cast<const char *>(filters_vocab_en);
 
     // Read the magic number
     int magic = 0;
-    std::memcpy(&magic, vocabData, sizeof(magic));
-    vocabData += sizeof(magic);
+    std::memcpy(&magic, vocab_data, sizeof(magic));
+    vocab_data += sizeof(magic);
 
     // Check the magic number
     if (magic != 0x57535052) {  // 'WSPR'
-      std::cerr << "Invalid vocab data (bad magic)" << std::endl;
+      std::cerr << "Invalid vocab data (bad magic)" << '\n';
       return -1;
     }
 
     // Load mel filters
-    std::memcpy(&filters.n_mel, vocabData, sizeof(filters.n_mel));
-    vocabData += sizeof(filters.n_mel);
+    std::memcpy(&filters.n_mel, vocab_data, sizeof(filters.n_mel));
+    vocab_data += sizeof(filters.n_mel);
 
-    std::memcpy(&filters.n_fft, vocabData, sizeof(filters.n_fft));
-    vocabData += sizeof(filters.n_fft);
+    std::memcpy(&filters.n_fft, vocab_data, sizeof(filters.n_fft));
+    vocab_data += sizeof(filters.n_fft);
 
     std::cout << "n_mel:" << filters.n_mel << " n_fft:" << filters.n_fft
-              << std::endl;
+              << '\n';
 
     filters.data.resize(filters.n_mel * filters.n_fft);
-    std::memcpy(filters.data.data(), vocabData,
+    std::memcpy(filters.data.data(), vocab_data,
                 filters.data.size() * sizeof(float));
-    vocabData += filters.data.size() * sizeof(float);
+    vocab_data += filters.data.size() * sizeof(float);
 
     // Load vocab
     int n_vocab = 0;
-    std::memcpy(&n_vocab, vocabData, sizeof(n_vocab));
-    vocabData += sizeof(n_vocab);
+    std::memcpy(&n_vocab, vocab_data, sizeof(n_vocab));
+    vocab_data += sizeof(n_vocab);
 
-    std::cout << "n_vocab:" << n_vocab << std::endl;
+    std::cout << "n_vocab:" << n_vocab << '\n';
 
     for (int i = 0; i < n_vocab; i++) {
       int len = 0;
-      std::memcpy(&len, vocabData, sizeof(len));
-      vocabData += sizeof(len);
+      std::memcpy(&len, vocab_data, sizeof(len));
+      vocab_data += sizeof(len);
 
-      std::string word(vocabData, len);
-      vocabData += len;
+      std::string word(vocab_data, len);
+      vocab_data += len;
 
       g_vocab.id_to_token[i] = word;
     }
@@ -124,24 +130,24 @@ int TFLiteEngine::loadModel(const char *modelPath, const bool isMultilingual) {
     /////////////// Load tflite model buffer ///////////////
 
     // Open the TFLite model file for reading
-    std::ifstream modelFile(modelPath, std::ios::binary | std::ios::ate);
-    if (!modelFile.is_open()) {
-      std::cerr << "Unable to open model file: " << modelPath << std::endl;
+    std::ifstream model_file(modelPath, std::ios::binary | std::ios::ate);
+    if (!model_file.is_open()) {
+      std::cerr << "Unable to open model file: " << modelPath << '\n';
       return -1;
     }
 
     // Get the size of the model file
-    std::streamsize size = modelFile.tellg();
-    modelFile.seekg(0, std::ios::beg);
+    std::streamsize size = model_file.tellg();
+    model_file.seekg(0, std::ios::beg);
 
     // Allocate memory for the model buffer
     char *buffer = new char[size];
 
     // Read the model data into the buffer
-    if (modelFile.read(buffer, size)) {
-      modelFile.close();
+    if (model_file.read(buffer, size)) {
+      model_file.close();
     } else {
-      std::cerr << "Error reading model data from file." << std::endl;
+      std::cerr << "Error reading model data from file." << '\n';
     }
 
     g_whisper_tflite.size = size;
@@ -166,18 +172,19 @@ int TFLiteEngine::loadModel(const char *modelPath, const bool isMultilingual) {
         g_whisper_tflite.interpreter->typed_input_tensor<float>(0);
     g_whisper_tflite.is_whisper_tflite_initialized = true;
 
-    gettimeofday(&end_time, NULL);
+    gettimeofday(&end_time, nullptr);
     std::cout << "Time taken for TFLite initialization: "
-              << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
+              << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
   }
 
-  std::cout << "Exiting " << __func__ << "()" << std::endl;
+  std::cout << "Exiting " << __func__ << "()" << '\n';
   return 0;
 }
 
 std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
-  timeval start_time{}, end_time{};
-  gettimeofday(&start_time, NULL);
+  timeval start_time{};
+  timeval end_time{};
+  gettimeofday(&start_time, nullptr);
 
   // Hack if the audio file size is less than 30ms append with 0's
   samples.resize((WHISPER_SAMPLE_RATE * WHISPER_CHUNK_SIZE), 0);
@@ -186,13 +193,13 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
   if (!log_mel_spectrogram(samples.data(), samples.size(), WHISPER_SAMPLE_RATE,
                            WHISPER_N_FFT, WHISPER_HOP_LENGTH, WHISPER_N_MEL,
                            processor_count, filters, mel)) {
-    std::cerr << "Failed to compute mel spectrogram" << std::endl;
+    std::cerr << "Failed to compute mel spectrogram" << '\n';
     return "";
   }
 
-  gettimeofday(&end_time, NULL);
+  gettimeofday(&end_time, nullptr);
   std::cout << "Time taken for Spectrogram: "
-            << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
+            << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
 
   if (INFERENCE_ON_AUDIO_FILE) {
     memcpy(g_whisper_tflite.input, mel.data.data(),
@@ -203,7 +210,7 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
                sizeof(float));  // to load pre-generated input_features
   }                             // end of audio file processing
 
-  gettimeofday(&start_time, NULL);
+  gettimeofday(&start_time, nullptr);
 
   // Run inference
   g_whisper_tflite.interpreter->SetNumThreads(processor_count);
@@ -211,9 +218,9 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
     return "";
   }
 
-  gettimeofday(&end_time, NULL);
+  gettimeofday(&end_time, nullptr);
   std::cout << "Time taken for Interpreter: "
-            << TIME_DIFF_MS(start_time, end_time) << " ms" << std::endl;
+            << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
 
   int output = g_whisper_tflite.interpreter->outputs()[0];
   TfLiteTensor *output_tensor = g_whisper_tflite.interpreter->tensor(output);
@@ -222,7 +229,7 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
   auto output_size = output_dims->data[output_dims->size - 1];
 
   int *output_int = g_whisper_tflite.interpreter->typed_output_tensor<int>(0);
-  std::string text = "";
+  std::string text;
 
   for (int i = 0; i < output_size; i++) {
     if (output_int[i] == g_vocab.token_eot) {
@@ -245,13 +252,13 @@ std::string TFLiteEngine::transcribeFile(const char *waveFile) {
 }
 
 void TFLiteEngine::freeModel() {
-  std::cout << "Entering " << __func__ << "()" << std::endl;
+  std::cout << "Entering " << __func__ << "()" << '\n';
 
   if (g_whisper_tflite.buffer) {
     std::cout << __func__ << ": free buffer " << g_whisper_tflite.buffer
-              << " memory" << std::endl;
+              << " memory" << '\n';
     delete[] g_whisper_tflite.buffer;
   }
 
-  std::cout << "Exiting " << __func__ << "()" << std::endl;
+  std::cout << "Exiting " << __func__ << "()" << '\n';
 }

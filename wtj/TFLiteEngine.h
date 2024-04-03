@@ -9,10 +9,10 @@ class TFLiteEngine {
   TFLiteEngine(){};
   ~TFLiteEngine(){};
 
-  int loadModel(const char* modelPath, const bool isMultilingual);
-  void freeModel();
+  static int loadModel(const char* modelPath, const bool isMultilingual);
+  static void freeModel();
 
-  std::string transcribeBuffer(std::vector<float> samples);
+  static std::string transcribeBuffer(std::vector<float> samples);
   std::string transcribeFile(const char* waveFile);
 
  private:

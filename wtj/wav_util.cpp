@@ -1,11 +1,20 @@
 #include "wav_util.h"
 
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <ios>
+#include <iostream>
+#include <ostream>
+#include <string>
+#include <vector>
+
 std::vector<float> readWAVFile(const char* filename) {
   // Open the WAV file for binary reading
   std::ifstream wav_file(filename, std::ios::binary);
 
   if (!wav_file.is_open()) {
-    std::cerr << "Failed to open file: " << filename << std::endl;
+    std::cerr << "Failed to open file: " << filename << '\n';
     return std::vector<float>();
   }
 
@@ -17,7 +26,7 @@ std::vector<float> readWAVFile(const char* filename) {
   if (strncmp(wav_header.riff_header, "RIFF", 4) != 0 ||
       strncmp(wav_header.wave_header, "WAVE", 4) != 0 ||
       strncmp(wav_header.fmt_header, "fmt ", 4) != 0) {
-    std::cerr << "Not a valid WAV file: " << filename << std::endl;
+    std::cerr << "Not a valid WAV file: " << filename << '\n';
     return std::vector<float>();
   }
 
@@ -37,10 +46,10 @@ std::vector<float> readWAVFile(const char* filename) {
   }
 
   // Print information from the header
-  std::cout << "Audio Format: " << audio_format_str << std::endl;
-  std::cout << "Num Channels: " << wav_header.num_channels << std::endl;
-  std::cout << "Sample Rate: " << wav_header.sample_rate << std::endl;
-  std::cout << "Bits Per Sample: " << wav_header.bits_per_sample << std::endl;
+  std::cout << "Audio Format: " << audio_format_str << '\n';
+  std::cout << "Num Channels: " << wav_header.num_channels << '\n';
+  std::cout << "Sample Rate: " << wav_header.sample_rate << '\n';
+  std::cout << "Bits Per Sample: " << wav_header.bits_per_sample << '\n';
 
   // Calculate the number of samples
   uint32_t num_samples = wav_header.wav_size / wav_header.block_align;
