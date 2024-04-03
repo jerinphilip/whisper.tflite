@@ -49,6 +49,7 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
     fread(&vocab_size, sizeof(uint64_t), 1, vocab_fp);
     vocab_holder_ = std::make_unique<char[]>(vocab_size);
     fread(vocab_holder_.get(), vocab_size, 1, vocab_fp);
+    fclose(vocab_fp);
 
     const char *vocab_data =
         reinterpret_cast<const char *>(vocab_holder_.get());

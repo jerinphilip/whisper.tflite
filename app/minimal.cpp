@@ -15,7 +15,6 @@ limitations under the License.
 #include <bits/types/struct_timeval.h>
 #include <sys/time.h>
 
-#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -26,13 +25,10 @@ limitations under the License.
 
 #define DR_WAV_IMPLEMENTATION
 #include "dr_libs/dr_wav.h"
-#include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
 #include "tensorflow/lite/kernels/register.h"
-#include "whisper.tflite/input_features.h"
-#include "whisper.tflite/tflt-vocab-mel.h"
 #include "whisper.tflite/whisper.h"
 
 #define TFLITE_MINIMAL_CHECK(x)                              \
@@ -61,25 +57,33 @@ std::string remove_extra_spaces(const std::string& input) {
 }
 
 int main(int argc, char* argv[]) {
-  if ((argc != 2) && (argc != 3)) {
+  if (argc != 4) {
     fprintf(stderr,
-            "'minimal <tflite model>' or 'minimal <tflite model> <pcm_file "
-            "name>'\n");
+            "Usage: minimal <tflite model> <vocab file> <pcm_file name>\n");
     return 1;
   }
+
   const char* filename = argv[1];
   WhisperMel mel;  // Use the correct struct from whisper.h
   struct timeval start_time;
   struct timeval end_time;
   WhisperVocab vocab;
 
+  uint64_t vocab_size;
+  FILE* vocab_fp = fopen(argv[2], "rb");
+  fread(&vocab_size, sizeof(uint64_t), 1, vocab_fp);
+  auto vocab_holder = std::make_unique<char[]>(vocab_size);
+  fread(vocab_holder.get(), vocab_size, 1, vocab_fp);
+  fclose(vocab_fp);
+
   // Create a pointer to the start of the unsigned char array
-  unsigned char* ptr = tflt_vocab_mel_bin;
+  char* ptr = vocab_holder.get();
   // Read the magic number
   uint32_t magic = 0;
   memcpy(&magic, ptr, sizeof(magic));
   // tflt
-  if (magic != 0x74666C74) {
+  constexpr uint32_t kTFLTExpectedMagic = 0x74666C74;
+  if (magic != kTFLTExpectedMagic) {
     printf("Invalid vocab file (bad magic)\n");
     return 0;
   }
@@ -108,7 +112,9 @@ int main(int argc, char* argv[]) {
   vocab.n_vocab_additional = n_vocab;
   printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
 
-  char word[256];  // Assuming a maximum word length of 255 characters
+  // Assuming a maximum word length of 255 characters
+  constexpr size_t kMaxBufferSize = 256;
+  char word[kMaxBufferSize];
   for (int i = 0; i < n_vocab; i++) {
     uint32_t len;
     memcpy(&len, ptr, sizeof(len));
@@ -122,71 +128,69 @@ int main(int argc, char* argv[]) {
   }
 
   // Generate input_features for Audio file
-  if (argc == 3) {
-    const char* pcmfilename = argv[2];
-    // WAV input
-    std::vector<float> pcmf32;
-    {
-      drwav wav;
-      if (!drwav_init_file(&wav, pcmfilename, nullptr)) {
-        fprintf(stderr, "%s: failed to open WAV file '%s' - check your input\n",
-                argv[0], pcmfilename);
-        return 3;
-      }
-
-      if (wav.channels != 1 && wav.channels != 2) {
-        fprintf(stderr, "%s: WAV file '%s' must be mono or stereo\n", argv[0],
-                pcmfilename);
-        return 4;
-      }
-
-      if (wav.sampleRate !=
-          kWhisperSampleRate) {  // Update to use the correct sample rate
-        fprintf(stderr, "%s: WAV file '%s' must be 16 kHz\n", argv[0],
-                pcmfilename);
-        return 5;
-      }
-
-      if (wav.bitsPerSample != 16) {
-        fprintf(stderr, "%s: WAV file '%s' must be 16-bit\n", argv[0],
-                pcmfilename);
-        return 6;
-      }
-
-      int n = wav.totalPCMFrameCount;
-
-      std::vector<int16_t> pcm16;
-      pcm16.resize(n * wav.channels);
-      drwav_read_pcm_frames_s16(&wav, n, pcm16.data());
-      drwav_uninit(&wav);
-      // convert to mono, float
-      pcmf32.resize(n);
-      if (wav.channels == 1) {
-        for (int i = 0; i < n; i++) {
-          pcmf32[i] = static_cast<float>(pcm16[i]) / 32768.0F;
-        }
-      } else {
-        for (int i = 0; i < n; i++) {
-          pcmf32[i] =
-              static_cast<float>(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0F;
-        }
-      }
+  const char* pcmfilename = argv[3];
+  // WAV input
+  std::vector<float> pcmf32;
+  {
+    drwav wav;
+    if (!drwav_init_file(&wav, pcmfilename, nullptr)) {
+      fprintf(stderr, "%s: failed to open WAV file '%s' - check your input\n",
+              argv[0], pcmfilename);
+      return 3;
     }
 
-    // Hack if the audio file size is less than 30ms, append with 0's
-    pcmf32.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
-    if (!log_mel_spectrogram(pcmf32.data(), pcmf32.size(), kWhisperSampleRate,
-                             kWhisperNFFT, kWhisperHopLength, kWhisperNMEL, 1,
-                             filters, mel)) {
-      fprintf(stderr, "%s: failed to compute mel spectrogram\n", __func__);
-      return -1;
+    if (wav.channels != 1 && wav.channels != 2) {
+      fprintf(stderr, "%s: WAV file '%s' must be mono or stereo\n", argv[0],
+              pcmfilename);
+      return 4;
     }
 
-    printf("\nmel.n_len%d\n",
-           mel.n_len);  // Update to use the correct struct members
-    printf("\nmel.n_mel:%d\n",
-           mel.n_mel);  // Update to use the correct struct members
-  }                     // end of audio file processing
+    if (wav.sampleRate !=
+        kWhisperSampleRate) {  // Update to use the correct sample rate
+      fprintf(stderr, "%s: WAV file '%s' must be 16 kHz\n", argv[0],
+              pcmfilename);
+      return 5;
+    }
+
+    if (wav.bitsPerSample != 16) {
+      fprintf(stderr, "%s: WAV file '%s' must be 16-bit\n", argv[0],
+              pcmfilename);
+      return 6;
+    }
+
+    int n = wav.totalPCMFrameCount;
+
+    std::vector<int16_t> pcm16;
+    pcm16.resize(n * wav.channels);
+    drwav_read_pcm_frames_s16(&wav, n, pcm16.data());
+    drwav_uninit(&wav);
+    // convert to mono, float
+    pcmf32.resize(n);
+    if (wav.channels == 1) {
+      for (int i = 0; i < n; i++) {
+        pcmf32[i] = static_cast<float>(pcm16[i]) / 32768.0F;
+      }
+    } else {
+      for (int i = 0; i < n; i++) {
+        pcmf32[i] =
+            static_cast<float>(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0F;
+      }
+    }
+  }
+
+  // Hack if the audio file size is less than 30ms, append with 0's
+  pcmf32.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
+  if (!log_mel_spectrogram(pcmf32.data(), pcmf32.size(), kWhisperSampleRate,
+                           kWhisperNFFT, kWhisperHopLength, kWhisperNMEL, 1,
+                           filters, mel)) {
+    fprintf(stderr, "%s: failed to compute mel spectrogram\n", __func__);
+    return -1;
+  }
+
+  printf("\nmel.n_len%d\n",
+         mel.n_len);  // Update to use the correct struct members
+  printf("\nmel.n_mel:%d\n",
+         mel.n_mel);  // Update to use the correct struct members
 
   // Load tflite model
   std::unique_ptr<tflite::FlatBufferModel> model =
@@ -208,16 +212,10 @@ int main(int argc, char* argv[]) {
 
   // Get information about the memory area to use for the model's input.
   auto* input = interpreter->typed_input_tensor<float>(0);
-  if (argc == 2) {
-    // Load pre-generated input_features
-    memcpy(input, _content_input_features_bin,
-           kWhisperNMEL * kWhisperMelLen * sizeof(float));
-  } else if (argc == 3) {
-    // Use the processed audio data as input
-    memcpy(input, mel.data.data(),
-           mel.n_mel * mel.n_len *
-               sizeof(float));  // Update to use the correct struct members
-  }
+  // Use the processed audio data as input
+  memcpy(input, mel.data.data(),
+         mel.n_mel * mel.n_len *
+             sizeof(float));  // Update to use the correct struct members
 
   gettimeofday(&start_time, nullptr);
   // Run inference
