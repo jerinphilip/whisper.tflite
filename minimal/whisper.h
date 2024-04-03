@@ -10,7 +10,7 @@
 #include <vector>
 
 #define DR_WAV_IMPLEMENTATION
-#include "dr_wav.h"
+#include "dr_libs/dr_wav.h"
 
 // Constants
 constexpr int kNumGoldenGeneratedIDs = 21;
