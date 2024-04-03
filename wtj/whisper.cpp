@@ -1,7 +1,5 @@
 #include "whisper.h"
 
-#include <math.h>
-
 #include <cmath>
 #include <iostream>
 #include <thread>
@@ -21,15 +19,15 @@ const char* whisper_token_to_str(int token) {
 
 // Naive Discrete Fourier Transform
 void dft(const std::vector<float>& in, std::vector<float>& out) {
-  int n = in.size();
-  out.resize(n * 2);
+  int N = in.size();  // NOLINT(readability-identifier-naming)
+  out.resize(N * 2);
 
-  for (int k = 0; k < n; k++) {
+  for (int k = 0; k < N; k++) {
     float re = 0;
     float im = 0;
 
-    for (int n = 0; n < n; n++) {
-      float angle = 2 * M_PI * k * n / n;
+    for (int n = 0; n < N; n++) {
+      float angle = 2 * M_PI * k * n / N;
       re += in[n] * std::cos(angle);
       im -= in[n] * std::sin(angle);
     }
@@ -40,18 +38,19 @@ void dft(const std::vector<float>& in, std::vector<float>& out) {
 }
 
 // Cooley-Tukey FFT
+// NOLINTNEXTLINE(misc-no-recursion)
 void fft(const std::vector<float>& in, std::vector<float>& out) {
   out.resize(in.size() * 2);
 
-  int n = in.size();
+  int N = in.size();  // NOLINT(readability-identifier-naming)
 
-  if (n == 1) {
+  if (N == 1) {
     out[0] = in[0];
     out[1] = 0;
     return;
   }
 
-  if (n % 2 == 1) {
+  if (N % 2 == 1) {
     dft(in, out);
     return;
   }
@@ -59,7 +58,7 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
   std::vector<float> even;
   std::vector<float> odd;
 
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < N; i++) {
     if (i % 2 == 0) {
       even.push_back(in[i]);
     } else {
@@ -70,11 +69,11 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
   std::vector<float> even_fft;
   std::vector<float> odd_fft;
 
-  fft(even, even_fft);
-  fft(odd, odd_fft);
+  fft(even, even_fft);  // NOLINT(misc-no-recursion)
+  fft(odd, odd_fft);    // NOLINT(misc-no-recursion)
 
-  for (int k = 0; k < n / 2; k++) {
-    float theta = 2 * M_PI * k / n;
+  for (int k = 0; k < N / 2; k++) {
+    float theta = 2 * M_PI * k / N;
 
     float re = std::cos(theta);
     float im = -std::sin(theta);
@@ -85,8 +84,8 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
     out[2 * k + 0] = even_fft[2 * k + 0] + re * re_odd - im * im_odd;
     out[2 * k + 1] = even_fft[2 * k + 1] + re * im_odd + im * re_odd;
 
-    out[2 * (k + n / 2) + 0] = even_fft[2 * k + 0] - re * re_odd + im * im_odd;
-    out[2 * (k + n / 2) + 1] = even_fft[2 * k + 1] - re * im_odd - im * re_odd;
+    out[2 * (k + N / 2) + 0] = even_fft[2 * k + 0] - re * re_odd + im * im_odd;
+    out[2 * (k + N / 2) + 1] = even_fft[2 * k + 1] - re * im_odd - im * re_odd;
   }
 }
 

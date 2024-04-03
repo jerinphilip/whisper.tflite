@@ -5,6 +5,6 @@ Trying to repurpose
 suit my style, mostly. 
 
 My requirements include working with a German adapted `tiny` whisper, so some
-changes along those directions as well.t
+changes along those directions as well.
 
 * [tflite build using cmake](https://www.tensorflow.org/lite/guide/build_cmake)
