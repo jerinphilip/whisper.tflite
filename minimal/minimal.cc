@@ -12,12 +12,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
+#include <bits/types/struct_timeval.h>
+#include <sys/time.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "input_features.h"
 #include "tensorflow/lite/core/interpreter.h"
+#include "tensorflow/lite/core/interpreter_builder.h"
+#include "tensorflow/lite/core/model_builder.h"
 #include "tensorflow/lite/kernels/register.h"
-#include "tensorflow/lite/model.h"
-#include "tensorflow/lite/optional_debug_tools.h"
 #include "tflt-vocab-mel.h"
+#include "third_party/tensorflow/lite/c/c_api_types.h"
 #include "whisper.h"
 
 #define TFLITE_MINIMAL_CHECK(x)                              \
@@ -25,7 +38,7 @@ limitations under the License.
     fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__); \
     exit(1);                                                 \
   }
-std::string removeExtraSpaces(const std::string& input) {
+std::string remove_extra_spaces(const std::string& input) {
   std::string result;
   result.reserve(input.length());
   bool space = false;
@@ -54,7 +67,8 @@ int main(int argc, char* argv[]) {
   }
   const char* filename = argv[1];
   WhisperMelSpectrogram mel;  // Use the correct struct from whisper.h
-  struct timeval start_time, end_time;
+  struct timeval start_time;
+  struct timeval end_time;
 
   // Create a pointer to the start of the unsigned char array
   unsigned char* ptr = tflt_vocab_mel_bin;
@@ -88,7 +102,7 @@ int main(int argc, char* argv[]) {
   ptr += sizeof(n_vocab);
 
   gVocab.numTokens = n_vocab;  // Update the vocabulary size based on whisper.h
-  printf("\nn_vocab:%d\n", (int)n_vocab);
+  printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
 
   char word[256];  // Assuming a maximum word length of 255 characters
   for (int i = 0; i < n_vocab; i++) {
@@ -110,7 +124,7 @@ int main(int argc, char* argv[]) {
     std::vector<float> pcmf32;
     {
       drwav wav;
-      if (!drwav_init_file(&wav, pcmfilename, NULL)) {
+      if (!drwav_init_file(&wav, pcmfilename, nullptr)) {
         fprintf(stderr, "%s: failed to open WAV file '%s' - check your input\n",
                 argv[0], pcmfilename);
         return 3;
@@ -145,11 +159,12 @@ int main(int argc, char* argv[]) {
       pcmf32.resize(n);
       if (wav.channels == 1) {
         for (int i = 0; i < n; i++) {
-          pcmf32[i] = float(pcm16[i]) / 32768.0f;
+          pcmf32[i] = static_cast<float>(pcm16[i]) / 32768.0F;
         }
       } else {
         for (int i = 0; i < n; i++) {
-          pcmf32[i] = float(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0f;
+          pcmf32[i] =
+              static_cast<float>(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0F;
         }
       }
     }
@@ -188,7 +203,7 @@ int main(int argc, char* argv[]) {
   TFLITE_MINIMAL_CHECK(interpreter->AllocateTensors() == kTfLiteOk);
 
   // Get information about the memory area to use for the model's input.
-  float* input = interpreter->typed_input_tensor<float>(0);
+  auto* input = interpreter->typed_input_tensor<float>(0);
   if (argc == 2) {
     // Load pre-generated input_features
     memcpy(input, _content_input_features_bin,
@@ -200,10 +215,10 @@ int main(int argc, char* argv[]) {
                sizeof(float));  // Update to use the correct struct members
   }
 
-  gettimeofday(&start_time, NULL);
+  gettimeofday(&start_time, nullptr);
   // Run inference
   TFLITE_MINIMAL_CHECK(interpreter->Invoke() == kTfLiteOk);
-  gettimeofday(&end_time, NULL);
+  gettimeofday(&end_time, nullptr);
   printf("Inference time %ld seconds \n",
          (end_time.tv_sec - start_time.tv_sec));
 
@@ -212,7 +227,7 @@ int main(int argc, char* argv[]) {
   TfLiteIntArray* output_dims = output_tensor->dims;
   auto output_size = output_dims->data[output_dims->size - 1];
   int* output_int = interpreter->typed_output_tensor<int>(0);
-  std::string text = "";
+  std::string text;
 
   for (int i = 0; i < output_size; i++) {
     if (output_int[i] == gVocab.tokenEOT) {
@@ -224,7 +239,7 @@ int main(int argc, char* argv[]) {
   }
 
   // Remove extra spaces between words
-  text = removeExtraSpaces(text);
+  text = remove_extra_spaces(text);
 
   printf("\n%s\n", text.c_str());
   printf("\n");
