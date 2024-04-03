@@ -1,3 +1,7 @@
 [submodule "deps/tensorflow"]
 	path = deps/tensorflow
 	url = https://github.com/tensorflow/tensorflow.git
+
+[submodule "deps/flatbuffers"]
+	path = deps/flatbuffers
+	url = https://github.com/google/flatbuffers.git
