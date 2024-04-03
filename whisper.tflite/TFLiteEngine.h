@@ -12,7 +12,8 @@ class TFLiteEngine {
   ~TFLiteEngine() = default;
 
   // NOLINTBEGIN(readability-identifier-naming)
-  int loadModel(const char* modelPath, bool isMultilingual);
+  int loadModel(const char* modelPath, const char* vocabPath,
+                bool isMultilingual);
   void freeModel();
 
   std::string transcribeBuffer(std::vector<float> samples);
@@ -28,6 +29,8 @@ class TFLiteEngine {
   WhisperVocab vocab_;
   WhisperFilters filters_;
   WhisperMel mel_;
+
+  std::unique_ptr<char[]> vocab_holder_;
 };
 
 #endif  // _TFLITEENGINE_H_

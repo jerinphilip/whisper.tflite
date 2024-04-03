@@ -14,15 +14,10 @@
 
 #include "core/interpreter_builder.h"
 #include "core/model_builder.h"
-#include "filters_vocab_en.h"
-#include "filters_vocab_multilingual.h"
-#include "input_features.h"
-#include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "wav_util.h"
 #include "whisper.h"
 
-enum { INFERENCE_ON_AUDIO_FILE = 1 };
 #define TIME_DIFF_MS(start, end)                  \
   (((((end).tv_sec - (start).tv_sec) * 1000000) + \
     ((end).tv_usec - (start).tv_usec)) /          \
@@ -33,7 +28,8 @@ enum { INFERENCE_ON_AUDIO_FILE = 1 };
     exit(1);                                               \
   }
 
-int TFLiteEngine::loadModel(const char *modelPath, const bool isMultilingual) {
+int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
+                            const bool isMultilingual) {
   std::cout << "Entering " << __func__ << "()" << '\n';
 
   timeval start_time{};
@@ -43,12 +39,19 @@ int TFLiteEngine::loadModel(const char *modelPath, const bool isMultilingual) {
     std::cout << "Initializing TFLite..." << '\n';
 
     /////////////// Load filters and vocab data ///////////////
+    FILE *vocab_fp = fopen(vocabPath, "rb");
+    if (vocab_fp == nullptr) {
+      fprintf(stderr, "Unable to open vocabulary file: %s", vocabPath);
+      return -1;
+    }
 
-    const char *vocab_data = nullptr;
-    if (isMultilingual)
-      vocab_data = reinterpret_cast<const char *>(filters_vocab_multilingual);
-    else
-      vocab_data = reinterpret_cast<const char *>(filters_vocab_en);
+    uint64_t vocab_size = 0;
+    fread(&vocab_size, sizeof(uint64_t), 1, vocab_fp);
+    vocab_holder_ = std::make_unique<char[]>(vocab_size);
+    fread(vocab_holder_.get(), vocab_size, 1, vocab_fp);
+
+    const char *vocab_data =
+        reinterpret_cast<const char *>(vocab_holder_.get());
 
     // Read the magic number
     int magic = 0;
@@ -56,7 +59,8 @@ int TFLiteEngine::loadModel(const char *modelPath, const bool isMultilingual) {
     vocab_data += sizeof(magic);
 
     // Check the magic number
-    if (magic != 0x57535052) {  // 'WSPR'
+    constexpr int kVocabMagic = 0x57535052;
+    if (magic != kVocabMagic) {  // 'WSPR'
       std::cerr << "Invalid vocab data (bad magic)" << '\n';
       return -1;
     }
@@ -198,15 +202,8 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
   std::cout << "Time taken for Spectrogram: "
             << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
 
-  if (INFERENCE_ON_AUDIO_FILE) {
-    memcpy(whisper_.input, mel_.data.data(),
-           mel_.n_mel * mel_.n_len * sizeof(float));
-  } else {
-    memcpy(whisper_.input, _content_input_features_bin,
-           kWhisperNMEL * kWhisperMelLen *
-               sizeof(float));  // to load pre-generated input_features
-  }                             // end of audio file processing
-
+  memcpy(whisper_.input, mel_.data.data(),
+         mel_.n_mel * mel_.n_len * sizeof(float));
   gettimeofday(&start_time, nullptr);
 
   // Run inference
