@@ -4,19 +4,28 @@
 #include <string>
 #include <vector>
 
+#include "whisper.h"
+
 class TFLiteEngine {
  public:
-  TFLiteEngine(){};
-  ~TFLiteEngine(){};
+  TFLiteEngine() = default;
+  ~TFLiteEngine() = default;
 
-  static int loadModel(const char* modelPath, const bool isMultilingual);
-  static void freeModel();
+  int loadModel(const char* modelPath, const bool isMultilingual);
+  void freeModel();
 
-  static std::string transcribeBuffer(std::vector<float> samples);
+  std::string transcribeBuffer(std::vector<float> samples);
   std::string transcribeFile(const char* waveFile);
 
  private:
+  // Convert a token to a string
+  const char* decode(int token) { return vocab_.id_to_token.at(token).c_str(); }
+
   // Add any private members or helper functions as needed
+  whisper_tflite whisper_;
+  whisper_vocab vocab_;
+  whisper_filters filters_;
+  whisper_mel mel_;
 };
 
 #endif  // _TFLITEENGINE_H_

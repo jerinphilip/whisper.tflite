@@ -12,11 +12,6 @@ void print(const std::vector<float>& a) {
   for (float i : a) std::cout << i << ' ';
 }
 
-// Convert a token to a string
-const char* whisper_token_to_str(int token) {
-  return g_vocab.id_to_token.at(token).c_str();
-}
-
 // Naive Discrete Fourier Transform
 void dft(const std::vector<float>& in, std::vector<float>& out) {
   int N = in.size();  // NOLINT(readability-identifier-naming)
@@ -156,8 +151,10 @@ bool log_mel_spectrogram(const float* samples, const int n_samples,
                 sum += fft_out[k] * filters.data[j * n_fft + k];
               }
 
-              if (sum < 1e-10) {
-                sum = 1e-10;
+              constexpr float kEPS = 1e-10;
+
+              if (sum < kEPS) {
+                sum = kEPS;
               }
 
               sum = log10(sum);
@@ -194,8 +191,3 @@ bool log_mel_spectrogram(const float* samples, const int n_samples,
 
   return true;
 }
-
-whisper_tflite g_whisper_tflite;
-whisper_vocab g_vocab;
-whisper_filters filters;
-whisper_mel mel;

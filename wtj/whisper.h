@@ -80,17 +80,8 @@ struct whisper_mel {
   std::vector<float> data;
 };
 
-// Global whisper_vocab instance
-extern whisper_vocab g_vocab;
-extern whisper_tflite g_whisper_tflite;
-extern whisper_filters filters;
-extern whisper_mel mel;
-
 // Print a vector of float values
 void print(const std::vector<float>& a);
-
-// Convert a token to a string
-const char* whisper_token_to_str(int token);
 
 // Naive Discrete Fourier Transform
 void dft(const std::vector<float>& in, std::vector<float>& out);
