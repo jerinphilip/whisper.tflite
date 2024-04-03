@@ -17,14 +17,6 @@
 #include "tensorflow/lite/model.h"
 #include "tensorflow/lite/optional_debug_tools.h"
 
-// Define constants
-#define WHISPER_SAMPLE_RATE 16000
-#define WHISPER_N_FFT 400
-#define WHISPER_N_MEL 80
-#define WHISPER_HOP_LENGTH 160
-#define WHISPER_CHUNK_SIZE 30
-#define WHISPER_MEL_LEN 3000
-
 // Constants
 static constexpr int kNumGoldenGeneratedIDs = 21;
 static constexpr int kGoldenGeneratedIDs[kNumGoldenGeneratedIDs] = {

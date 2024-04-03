@@ -184,11 +184,11 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
   gettimeofday(&start_time, nullptr);
 
   // Hack if the audio file size is less than 30ms append with 0's
-  samples.resize((WHISPER_SAMPLE_RATE * WHISPER_CHUNK_SIZE), 0);
+  samples.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
   const auto processor_count = std::thread::hardware_concurrency();
 
-  if (!log_mel_spectrogram(samples.data(), samples.size(), WHISPER_SAMPLE_RATE,
-                           WHISPER_N_FFT, WHISPER_HOP_LENGTH, WHISPER_N_MEL,
+  if (!log_mel_spectrogram(samples.data(), samples.size(), kWhisperSampleRate,
+                           kWhisperNFFT, kWhisperHopLength, kWhisperNMEL,
                            processor_count, filters_, mel_)) {
     std::cerr << "Failed to compute mel_ spectrogram" << '\n';
     return "";
@@ -203,7 +203,7 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
            mel_.n_mel * mel_.n_len * sizeof(float));
   } else {
     memcpy(whisper_.input, _content_input_features_bin,
-           WHISPER_N_MEL * WHISPER_MEL_LEN *
+           kWhisperNMEL * kWhisperMelLen *
                sizeof(float));  // to load pre-generated input_features
   }                             // end of audio file processing
 
@@ -243,7 +243,7 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
 
 std::string TFLiteEngine::transcribeFile(const char *waveFile) {
   std::vector<float> pcmf32 = readWAVFile(waveFile);
-  pcmf32.resize((WHISPER_SAMPLE_RATE * WHISPER_CHUNK_SIZE), 0);
+  pcmf32.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
   std::string text = transcribeBuffer(pcmf32);
   return text;
 }
