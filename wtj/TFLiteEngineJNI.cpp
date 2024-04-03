@@ -7,20 +7,23 @@
 
 #include "TFLiteEngine.h"
 
+#define WTJ_JNI_EXPORT(cls, fn) \
+  JNICALL java_com_io_github_jerinphilip_##cls##_##fn
+
 extern "C" {
 
 // JNI method to create an instance of TFLiteEngine
-JNIEXPORT jlong JNICALL
-java_com_whispertflite_engine_whisper_engine_native_create_tf_lite_engine(
-    JNIEnv * /*env*/, jobject /*thiz*/) {
+JNIEXPORT jlong WTJ_JNI_EXPORT(WhisperEngineNative,
+                               createTFLiteEngine)(JNIEnv * /*env*/,
+                                                   jobject /*thiz*/) {
   return reinterpret_cast<jlong>(new TFLiteEngine());
 }
 
 // JNI method to load the model
-JNIEXPORT jint JNICALL
-java_com_whispertflite_engine_whisper_engine_native_load_model(
-    JNIEnv *env, jobject /*thiz*/, jlong nativePtr, jstring modelPath,
-    jboolean isMultilingual) {
+JNIEXPORT jint WTJ_JNI_EXPORT(WhisperEngineNative,
+                              loadModel)(JNIEnv *env, jobject /*thiz*/,
+                                         jlong nativePtr, jstring modelPath,
+                                         jboolean isMultilingual) {
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_model_path = env->GetStringUTFChars(modelPath, nullptr);
   int result = engine->loadModel(c_model_path, isMultilingual != 0u);
@@ -29,17 +32,16 @@ java_com_whispertflite_engine_whisper_engine_native_load_model(
 }
 
 // JNI method to free the model
-JNIEXPORT void JNICALL
-java_com_whispertflite_engine_whisper_engine_native_free_model(
-    JNIEnv * /*env*/, jobject /*thiz*/, jlong nativePtr) {
+JNIEXPORT void WTJ_JNI_EXPORT(WhisperEngineNative, freeModel)(JNIEnv * /*env*/,
+                                                              jobject /*thiz*/,
+                                                              jlong nativePtr) {
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   engine->freeModel();
   delete engine;
 }
 
 // JNI method to transcribe audio buffer
-JNIEXPORT jstring JNICALL
-java_com_whispertflite_engine_whisper_engine_native_transcribe_buffer(
+JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative, transcribeBuffer)(
     JNIEnv *env, jobject /*thiz*/, jlong nativePtr, jfloatArray samples) {
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
 
@@ -54,9 +56,10 @@ java_com_whispertflite_engine_whisper_engine_native_transcribe_buffer(
 }
 
 // JNI method to transcribe audio file
-JNIEXPORT jstring JNICALL
-java_com_whispertflite_engine_whisper_engine_native_transcribe_file(
-    JNIEnv *env, jobject /*thiz*/, jlong nativePtr, jstring waveFile) {
+JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative,
+                                 transcribeFile)(JNIEnv *env, jobject /*thiz*/,
+                                                 jlong nativePtr,
+                                                 jstring waveFile) {
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_wave_file = env->GetStringUTFChars(waveFile, nullptr);
   std::string result = engine->transcribeFile(c_wave_file);
@@ -65,3 +68,4 @@ java_com_whispertflite_engine_whisper_engine_native_transcribe_file(
 }
 
 }  // extern "C"
+#undef WTJ_JNI_EXPORT

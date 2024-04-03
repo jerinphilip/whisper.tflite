@@ -25,12 +25,12 @@ limitations under the License.
 #include <vector>
 
 #include "input_features.h"
+#include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
 #include "tensorflow/lite/kernels/register.h"
 #include "tflt-vocab-mel.h"
-#include "third_party/tensorflow/lite/c/c_api_types.h"
 #include "whisper.h"
 
 #define TFLITE_MINIMAL_CHECK(x)                              \
