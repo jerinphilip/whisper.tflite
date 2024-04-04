@@ -124,15 +124,7 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
 
     // add additional vocab ids
     int n_vocab_expected = kVocabEnSize;
-    if (isMultilingual) {
-      n_vocab_expected = kVocabMultilingualSize;
-      vocab_.token_eot++;
-      vocab_.token_sot++;
-      vocab_.token_prev++;
-      vocab_.token_solm++;
-      vocab_.token_not++;
-      vocab_.token_beg++;
-    }
+    transform_vocab_multilingual(vocab_);
 
     for (int i = n_vocab; i < n_vocab_expected; i++) {
       std::string word;

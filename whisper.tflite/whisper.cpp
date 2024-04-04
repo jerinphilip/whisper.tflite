@@ -193,4 +193,15 @@ bool log_mel_spectrogram(const float* samples, int n_samples,
 
   return true;
 }
+
+void transform_vocab_multilingual(Vocab& vocab) {
+  vocab.n_vocab = kVocabMultilingualSize;
+  vocab.token_eot++;
+  vocab.token_sot++;
+  vocab.token_prev++;
+  vocab.token_solm++;
+  vocab.token_not++;
+  vocab.token_beg++;
+}
+
 }  // namespace whisper

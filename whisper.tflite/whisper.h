@@ -48,7 +48,7 @@ struct Vocab {
 
   // NOLINTBEGIN(readability-magic-numbers)
   // clang-format off
-  int n_vocab_additional  = 51864;
+  int n_vocab             = 51864;
   int token_eot           = 50256;   // end of transcript
   int token_sot           = 50257;   // start of transcript
                                      //
@@ -118,6 +118,8 @@ const char* whisper_token_to_str(int token);
 bool log_mel_spectrogram(const float* samples, int n_samples, int sample_rate,
                          int fft_size, int fft_step, int n_mel, int n_threads,
                          Filters& filters, Mel& mel);
+
+void transform_vocab_multilingual(Vocab& vocab);
 
 }  // namespace whisper
 #endif  // _WHISPER_H_

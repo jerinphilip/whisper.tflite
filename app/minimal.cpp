@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
   ptr += sizeof(n_vocab);
 
   // Update the vocabulary size based on whisper.h
-  vocab.n_vocab_additional = n_vocab;
+  vocab.n_vocab = n_vocab;
   printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
 
   // Assuming a maximum word length of 255 characters

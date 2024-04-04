@@ -209,12 +209,13 @@ struct Decoder {
     auto argmax = [](const float* begin, const float* end) {
       const float* p = begin;
       float max_value = *p;
-      size_t max_index = std::distance(begin, p);
+      int64_t max_index = std::distance(begin, p);
       ++p;
       while (p < end) {
+        int64_t index = std::distance(begin, p);
         if (*p >= max_value) {
           max_value = *p;
-          max_index = std::distance(begin, p);
+          max_index = index;
         }
         ++p;
       }
@@ -225,6 +226,7 @@ struct Decoder {
     int64_t eos_id = 50257;                    // NOLINT
     constexpr size_t max_decoder_tokens = 30;  // NOLINT
     constexpr size_t vocab_size = 51865;       // NOLINT
+    int64_t num_prime_tokens = prompt.size();
     for (size_t i = prompt.size() - 1; i < max_decoder_tokens; i++) {
       interpreter->ResizeInputTensor(1, {1, static_cast<int>(prompt.size())});
       interpreter->AllocateTensors();
@@ -240,6 +242,8 @@ struct Decoder {
       auto* out = interpreter->typed_output_tensor<float>(0);
 
       std::vector<int64_t> decoded;
+      // int64_t suppress = (i + 1 == num_prime_tokens) ? eos_id : -1;
+      int64_t suppress = eos_id;
       for (size_t offset = 0; offset <= i; offset++) {
         float* begin = out + offset * vocab_size;
         auto m = argmax(begin, begin + vocab_size);
@@ -312,8 +316,9 @@ int run(const Options& options) {
   ptr += sizeof(n_vocab);
 
   // Update the vocabulary size based on whisper.h
-  vocab.n_vocab_additional = n_vocab;
+  vocab.n_vocab = n_vocab;
   printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
+  transform_vocab_multilingual(vocab);
 
   // Assuming a maximum word length of 255 characters
   constexpr size_t kMaxBufferSize = 256;
