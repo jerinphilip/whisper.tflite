@@ -65,6 +65,7 @@ JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative,
                                  transcribeFile)(JNIEnv *env, jobject /*thiz*/,
                                                  jlong nativePtr,
                                                  jstring waveFile) {
+  // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_wave_file = env->GetStringUTFChars(waveFile, nullptr);
   std::string result = engine->transcribeFile(c_wave_file);

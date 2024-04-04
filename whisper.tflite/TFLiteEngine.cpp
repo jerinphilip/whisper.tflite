@@ -63,11 +63,18 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
     //      n_fft;
     //      data [ n_mel x n_fft ];
     //    }
+    //    vocab {
+    //      n_vocab;
+    //      { token-length <token> } [ n_vocab]
+    //    }
     //
-    //
-    //
-    //
-    //
+    //    extra-vocab {
+    //        EOT // "[_EOT_]"
+    //        SOT // "[_SOT_]
+    //        PREV // "[_PREV_]
+    //        NOT // "[_NOT_]
+    //        BEG // "[_BEG_]
+    //    }
     // };
     // Read the magic number
     int magic = 0;
@@ -114,21 +121,7 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
       vocab_.id_to_token[i] = word;
     }
 
-    //    vocab {
-    //      n_vocab;
-    //      { token-length <token> } [ n_vocab]
-    //    }
-    //
-    //    extra-vocab {
-    //        EOT // "[_EOT_]"
-    //        SOT // "[_SOT_]
-    //        PREV // "[_PREV_]
-    //        NOT // "[_NOT_]
-    //        BEG // "[_BEG_]
-    //    }
-
     // add additional vocab ids
-    // int n_vocab_additional  = 51864;
     int n_vocab_expected = kWhisperVocabEnSize;
     if (isMultilingual) {
       n_vocab_expected = kWhisperVocabMultilingualSize;
