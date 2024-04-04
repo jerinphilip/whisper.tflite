@@ -206,6 +206,22 @@ struct Decoder {
 
     inspect_tflite_tensor("decoder_in[1]", *decoder_ids());
 
+    auto argmax = [](const float* begin, const float* end) {
+      const float* p = begin;
+      float max_value = *p;
+      size_t max_index = std::distance(begin, p);
+      ++p;
+      while (p < end) {
+        if (*p >= max_value) {
+          max_value = *p;
+          max_index = std::distance(begin, p);
+        }
+        ++p;
+      }
+
+      return std::make_pair(max_index, max_value);
+    };
+
     int64_t eos_id = 50257;                    // NOLINT
     constexpr size_t max_decoder_tokens = 30;  // NOLINT
     constexpr size_t vocab_size = 51865;       // NOLINT
@@ -225,24 +241,15 @@ struct Decoder {
 
       std::vector<int64_t> decoded;
       for (size_t offset = 0; offset <= i; offset++) {
-        size_t max_index = -1;
-        float max_value = -1;
-        for (size_t j = 0; j < vocab_size; j++) {
-          float value = out[offset * vocab_size + j];
-          if (value >= max_value) {
-            max_value = value;
-            max_index = j;
-          }
-          // fprintf(stderr, "%zu: %f\n", j, value);
-        }
-
+        float* begin = out + offset * vocab_size;
+        auto m = argmax(begin, begin + vocab_size);
         if (std::getenv("DEBUG")) {
-          fprintf(stderr, "decode[%zu]@%zu = %zu, %f\n", offset, i, max_index,
-                  max_value);
+          fprintf(stderr, "decode[%zu]@%zu = %zu, %f\n", offset, i, m.first,
+                  m.second);
         }
         // Last element get added.
         if (offset == i) {
-          prompt.push_back(max_index);
+          prompt.push_back(m.first);
         }
       }
 
@@ -250,12 +257,6 @@ struct Decoder {
         break;
       }
     }
-
-    fprintf(stderr, "decoded: ");
-    for (auto& token : prompt) {
-      fprintf(stderr, "%zu ", token);
-    }
-    fprintf(stderr, "\n");
 
     return prompt;
   }
@@ -394,12 +395,13 @@ int run(const Options& options) {
   Decoder decoder(options.decoder);
   std::vector<int64_t> decoded = decoder.forward(encoder_out);
   std::string surface;
+  fprintf(stderr, "ids: ");
   for (auto& id : decoded) {
     fprintf(stderr, "%zu ", id);
     surface += vocab.id_to_token[id];
   }
   fprintf(stderr, "\n");
-  fprintf(stderr, "%s\n", surface.c_str());
+  fprintf(stderr, "surface: [%s]\n", surface.c_str());
 
   return 0;
 }
