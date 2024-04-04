@@ -133,12 +133,14 @@ struct Atom {
 };
 
 void inspect_tflite_tensor(const char* name, const TfLiteTensor& tensor) {
-  const TfLiteIntArray* dims = tensor.dims;
-  fprintf(stderr, "[user::%s] [%s: ", name, tf_type_to_name(tensor.type));
-  for (size_t i = 0; i < dims->size; i++) {
-    fprintf(stderr, "%s%d", i ? "x" : "", dims->data[i]);
+  if (std::getenv("DEBUG")) {
+    const TfLiteIntArray* dims = tensor.dims;
+    fprintf(stderr, "[user::%s] [%s: ", name, tf_type_to_name(tensor.type));
+    for (size_t i = 0; i < dims->size; i++) {
+      fprintf(stderr, "%s%d", i ? "x" : "", dims->data[i]);
+    }
+    fprintf(stderr, "] size: %zu [tf::%s]\n", tensor.bytes, tensor.name);
   }
-  fprintf(stderr, "] size: %zu [tf::%s]\n", tensor.bytes, tensor.name);
 };
 
 struct Encoder {
@@ -234,14 +236,19 @@ struct Decoder {
           // fprintf(stderr, "%zu: %f\n", j, value);
         }
 
-        fprintf(stderr, "decode[%zu]@%zu = %zu, %f\n", offset, i, max_index,
-                max_value);
+        if (std::getenv("DEBUG")) {
+          fprintf(stderr, "decode[%zu]@%zu = %zu, %f\n", offset, i, max_index,
+                  max_value);
+        }
         // Last element get added.
         if (offset == i) {
           prompt.push_back(max_index);
         }
       }
-      scanf("%zu", &eos_id);
+
+      if (prompt.back() == eos_id) {
+        break;
+      }
     }
 
     fprintf(stderr, "decoded: ");
@@ -392,7 +399,7 @@ int run(const Options& options) {
     surface += vocab.id_to_token[id];
   }
   fprintf(stderr, "\n");
-  fprintf(stderr, "%s", surface.c_str());
+  fprintf(stderr, "%s\n", surface.c_str());
 
   return 0;
 }
