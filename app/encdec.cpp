@@ -177,18 +177,7 @@ struct Encoder {
 struct Decoder {
  public:
   explicit Decoder(const std::string& path) : atom_(path) {}
-  std::vector<int> forward(std::tuple<TfLiteTensor*, float*> encoder_out) {
-    //   decoder_start_token = 50258
-    //   forced_decoder_ids = [vocab_id for idx, vocab_id in forced_decoder_ids]
-    //   forced_decoder_ids.insert(0, decoder_start_token)
-
-    //   decoder_input_ids = torch.tensor(forced_decoder_ids)
-    //   decoder_input_ids = tf.expand_dims(decoder_input_ids, 0)
-
-    //   eos_id = 50257
-    //   input_tensor_1 = interpreter.get_input_details()[0]["index"]
-    //   interpreter.set_tensor(input_tensor_1, encoder_output_data)
-
+  std::vector<int64_t> forward(std::tuple<TfLiteTensor*, float*> encoder_out) {
     (void)encoder_out;
     auto* interpreter = atom_.interpreter();
     TfLiteTensor* input = interpreter->input_tensor(0);
@@ -261,39 +250,7 @@ struct Decoder {
     }
     fprintf(stderr, "\n");
 
-    //   input_tensor_2 = interpreter.get_input_details()[1]["index"]
-    //   # Allocate memory for input and output tensors
-    //   interpreter.resize_tensor_input(input_tensor_2,
-    //   decoder_input_ids.shape) interpreter.allocate_tensors()
-    //   interpreter.set_tensor(input_tensor_2, decoder_input_ids)
-    //   output_tensor = interpreter.get_output_details()[0]["index"]
-    //   prompt_ids = [
-    //       50258,  # <|startoftranscript|>
-    //       50266,  # <|ja|>
-    //       50358,  # <|translate|>
-    //       50363,  # <|notimestamps|>
-    //   ]
-
-    //   tokens = forced_decoder_ids
-    //   max_num_tokens = 30
-    //   for i in range(max_num_tokens):
-    //       interpreter.invoke()
-    //       output_data = interpreter.get_tensor(output_tensor)
-    //       cleaned = np.argmax(output_data, axis=-1)
-    //       last_token = cleaned[0, -1]
-    //       tokens.append(last_token)
-    //       new_value = tf.constant([last_token], dtype=tf.int64)
-    //       new_value = tf.reshape(new_value, (1, 1))
-    //       decoder_input_ids = tf.concat([decoder_input_ids, new_value],
-    //       axis=1) input_tensor_2 =
-    //       interpreter.get_input_details()[1]["index"]
-    //       interpreter.resize_tensor_input(input_tensor_2,
-    //       decoder_input_ids.shape) # Allocate memory for input and output
-    //       tensors interpreter.allocate_tensors()
-    //       interpreter.set_tensor(input_tensor_2, decoder_input_ids)
-    //       if last_token == eos_id:
-    //           break
-    return {};
+    return prompt;
   }
 
  private:
@@ -428,35 +385,15 @@ int run(const Options& options) {
   auto encoder_out = encoder.forward(mel);
 
   Decoder decoder(options.decoder);
-  decoder.forward(encoder_out);
-
-  return 0;
-#if 0
-  TfLiteTensor* output_tensor = interpreter->tensor(output);
-  TfLiteIntArray* output_dims = output_tensor->dims;
-  auto output_size = output_dims->data[output_dims->size - 1];
-  int* output_int = interpreter->typed_output_tensor<int>(0);
-  std::string text;
-  auto decode = [&vocab](int token) {
-    // Empty
-    return vocab.id_to_token.at(token).c_str();
-  };
-
-  for (int i = 0; i < output_size; i++) {
-    if (output_int[i] == vocab.token_eot) {
-      break;
-    }
-    if (output_int[i] < vocab.token_eot) {
-      text += decode(output_int[i]);
-    }
+  std::vector<int64_t> decoded = decoder.forward(encoder_out);
+  std::string surface;
+  for (auto& id : decoded) {
+    fprintf(stderr, "%zu ", id);
+    surface += vocab.id_to_token[id];
   }
+  fprintf(stderr, "\n");
+  fprintf(stderr, "%s", surface.c_str());
 
-  // Remove extra spaces between words
-  text = remove_extra_spaces(text);
-
-  printf("\n%s\n", text.c_str());
-  printf("\n");
-#endif
   return 0;
 }
 
