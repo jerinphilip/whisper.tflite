@@ -162,14 +162,13 @@ int main(int argc, char* argv[]) {
       return 6;
     }
 
-    int n = wav.totalPCMFrameCount;
-
     std::vector<int16_t> pcm16;
-    pcm16.resize(n * wav.channels);
-    drwav_read_pcm_frames_s16(&wav, n, pcm16.data());
+    pcm16.resize(wav.totalPCMFrameCount * wav.channels);
+    drwav_read_pcm_frames_s16(&wav, wav.totalPCMFrameCount, pcm16.data());
     drwav_uninit(&wav);
     // convert to mono, float
-    pcmf32.resize(n);
+    pcmf32.resize(wav.totalPCMFrameCount);
+    int n = wav.totalPCMFrameCount;
     if (wav.channels == 1) {
       for (int i = 0; i < n; i++) {
         pcmf32[i] = static_cast<float>(pcm16[i]) / 32768.0F;

@@ -12,7 +12,7 @@ if(NOT TENSORFLOW_SOURCE_DIR)
                          "${CMAKE_SOURCE_DIR}/deps/tensorflow" ABSOLUTE)
 endif()
 
-set(APPS minimal)
+set(APPS minimal encdec)
 foreach(APP ${APPS})
   add_executable(${APP} ${APP}.cpp)
   target_link_libraries(${APP} tensorflow-lite whisper-tflite)
