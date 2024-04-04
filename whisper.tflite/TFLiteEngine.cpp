@@ -54,6 +54,21 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
     const char *vocab_data =
         reinterpret_cast<const char *>(vocab_holder_.get());
 
+    // Vocab file layout.
+    //
+    // VocabBin {
+    //    int magic; // 32-bit?  == 0x5753052
+    //    filters {
+    //      n_mel;
+    //      n_fft;
+    //      data [ n_mel x n_fft ];
+    //    }
+    //
+    //
+    //
+    //
+    //
+    // };
     // Read the magic number
     int magic = 0;
     std::memcpy(&magic, vocab_data, sizeof(magic));
@@ -99,10 +114,24 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
       vocab_.id_to_token[i] = word;
     }
 
+    //    vocab {
+    //      n_vocab;
+    //      { token-length <token> } [ n_vocab]
+    //    }
+    //
+    //    extra-vocab {
+    //        EOT // "[_EOT_]"
+    //        SOT // "[_SOT_]
+    //        PREV // "[_PREV_]
+    //        NOT // "[_NOT_]
+    //        BEG // "[_BEG_]
+    //    }
+
     // add additional vocab ids
-    int n_vocab_additional = 51864;
+    // int n_vocab_additional  = 51864;
+    int n_vocab_expected = kWhisperVocabEnSize;
     if (isMultilingual) {
-      n_vocab_additional = 51865;
+      n_vocab_expected = kWhisperVocabMultilingualSize;
       vocab_.token_eot++;
       vocab_.token_sot++;
       vocab_.token_prev++;
@@ -111,7 +140,7 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
       vocab_.token_beg++;
     }
 
-    for (int i = n_vocab; i < n_vocab_additional; i++) {
+    for (int i = n_vocab; i < n_vocab_expected; i++) {
       std::string word;
       if (i > vocab_.token_beg) {
         word = "[_TT_" + std::to_string(i - vocab_.token_beg) + "]";

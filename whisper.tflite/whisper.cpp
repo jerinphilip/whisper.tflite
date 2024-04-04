@@ -91,7 +91,10 @@ bool log_mel_spectrogram(const float* samples, int n_samples,
   std::vector<float> hann;
   hann.resize(fft_size);
 
+  // https://en.wikipedia.org/wiki/Hann_function
+  // Hann function is a window function used to perform Hann smoothing
   for (int i = 0; i < fft_size; i++) {
+    // NOLINTNEXTLINE(readability-magic-numbers)
     hann[i] = 0.5 * (1.0 - cos((2.0 * M_PI * i) / fft_size));
   }
 
@@ -165,8 +168,8 @@ bool log_mel_spectrogram(const float* samples, int n_samples,
   }
 
   // Wait for all threads to finish
-  for (int iw = 0; iw < n_threads; ++iw) {
-    workers[iw].join();
+  for (auto& worker : workers) {
+    worker.join();
   }
 
   // clamping and normalization

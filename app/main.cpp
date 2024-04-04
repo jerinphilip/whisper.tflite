@@ -9,11 +9,12 @@ int main() {
 
   // Load the TFLite model and vocabulary
   const char* model_path = "../../assets/whisper-tiny-en.tflite";
+  const char* vocab_path = nullptr;
   if (is_multilingual) {
     model_path = "../../assets/whisper-tiny.tflite";
   }
 
-  int result = engine.loadModel(model_path, is_multilingual);
+  int result = engine.loadModel(model_path, nullptr, is_multilingual);
   if (result != 0) {
     std::cerr << "Error loading the TFLite model or vocabulary." << '\n';
     return 1;

@@ -1,7 +1,6 @@
 #include <jni.h>
 #include <jni_md.h>
 
-#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -23,10 +22,13 @@ JNIEXPORT jlong WTJ_JNI_EXPORT(WhisperEngineNative,
 JNIEXPORT jint WTJ_JNI_EXPORT(WhisperEngineNative,
                               loadModel)(JNIEnv *env, jobject /*thiz*/,
                                          jlong nativePtr, jstring modelPath,
+                                         jstring vocabPath,
                                          jboolean isMultilingual) {
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_model_path = env->GetStringUTFChars(modelPath, nullptr);
-  int result = engine->loadModel(c_model_path, isMultilingual != 0u);
+  const char *c_vocab_path = env->GetStringUTFChars(vocabPath, nullptr);
+  int result =
+      engine->loadModel(c_model_path, c_vocab_path, isMultilingual != 0U);
   env->ReleaseStringUTFChars(modelPath, c_model_path);
   return static_cast<jint>(result);
 }

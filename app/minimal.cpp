@@ -36,6 +36,7 @@ limitations under the License.
     fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__); \
     exit(1);                                                 \
   }
+
 std::string remove_extra_spaces(const std::string& input) {
   std::string result;
   result.reserve(input.length());

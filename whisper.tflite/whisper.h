@@ -1,21 +1,14 @@
 #ifndef _WHISPER_H_
 #define _WHISPER_H_
 
-#include <cmath>
 #include <cstdint>
-#include <fstream>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "tensorflow/lite/core/interpreter.h"
-#include "tensorflow/lite/delegates/gpu/delegate.h"
 #include "tensorflow/lite/kernels/register.h"
-#include "tensorflow/lite/model.h"
-#include "tensorflow/lite/optional_debug_tools.h"
 
 // Constants
 static constexpr int kNumGoldenGeneratedIDs = 21;
@@ -29,22 +22,27 @@ static constexpr int kWhisperHopLength = 160;
 static constexpr int kWhisperChunkSize = 30;
 static constexpr int kWhisperMelLen = 3000;
 
+static constexpr int kWhisperVocabEnSize = 51864;
+static constexpr int kWhisperVocabMultilingualSize = 51865;
+
 struct WhisperVocab {
   std::map<int, std::string> id_to_token;
+  // Some explanation available at
+  // https://github.com/openai/whisper/blob/ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab/whisper/tokenizer.py#L175
 
   // NOLINTBEGIN(readability-magic-numbers)
   // clang-format off
   int n_vocab_additional  = 51864;
 
-  int token_eot           = 50256;
-  int token_sot           = 50257;
-  int token_prev          = 50360;
-  int token_solm          = 50361;   // ??
+  int token_eot           = 50256;   // end of transcript
+  int token_sot           = 50257;   // start of transcript
+  int token_translate     = 50358;   // translate 
+  int token_transcribe    = 50359;   // transcribe
+  int token_prev          = 50360;   // start of prev?
+  int token_solm          = 50361;   // start of LM
   int token_not           = 50362;   // no timestamps
-  int token_beg           = 50363;
+  int token_beg           = 50363;   // timestamp begin <|0.00|>
 
-  int token_translwordate = 50358;
-  int token_transcribe    = 50359;
   // clang-format on
   // NOLINTEND(readability-magic-numbers)
 };
