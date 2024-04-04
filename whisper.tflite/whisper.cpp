@@ -5,6 +5,8 @@
 #include <thread>
 #include <vector>
 
+namespace whisper {
+
 // Print a vector of float values
 void print(const std::vector<float>& a) {
   std::cout << "The vector elements are: ";
@@ -86,8 +88,7 @@ void fft(const std::vector<float>& in, std::vector<float>& out) {
 // Log mel spectrogram computation
 bool log_mel_spectrogram(const float* samples, int n_samples,
                          int /*sample_rate*/, int fft_size, int fft_step,
-                         int n_mel, int n_threads, WhisperFilters& filters,
-                         WhisperMel& mel) {
+                         int n_mel, int n_threads, Filters& filters, Mel& mel) {
   std::vector<float> hann;
   hann.resize(fft_size);
 
@@ -192,3 +193,4 @@ bool log_mel_spectrogram(const float* samples, int n_samples,
 
   return true;
 }
+}  // namespace whisper

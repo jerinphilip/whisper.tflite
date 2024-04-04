@@ -64,11 +64,14 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
+  // NOLINTNEXTLINE
+  using namespace whisper;
+
   const char* filename = argv[1];
-  WhisperMel mel;  // Use the correct struct from whisper.h
+  Mel mel;  // Use the correct struct from whisper.h
   struct timeval start_time;
   struct timeval end_time;
-  WhisperVocab vocab;
+  Vocab vocab;
 
   uint64_t vocab_size;
   FILE* vocab_fp = fopen(argv[2], "rb");
@@ -90,7 +93,7 @@ int main(int argc, char* argv[]) {
   }
   ptr += sizeof(magic);  // Move the pointer to the next position
 
-  WhisperFilters filters;  // Use the correct struct from whisper.h
+  Filters filters;  // Use the correct struct from whisper.h
   // Load mel filters
   memcpy(&filters.n_mel, ptr, sizeof(filters.n_mel));
   ptr += sizeof(filters.n_mel);
@@ -147,7 +150,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (wav.sampleRate !=
-        kWhisperSampleRate) {  // Update to use the correct sample rate
+        kSampleRate) {  // Update to use the correct sample rate
       fprintf(stderr, "%s: WAV file '%s' must be 16 kHz\n", argv[0],
               pcmfilename);
       return 5;
@@ -180,10 +183,9 @@ int main(int argc, char* argv[]) {
   }
 
   // Hack if the audio file size is less than 30ms, append with 0's
-  pcmf32.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
-  if (!log_mel_spectrogram(pcmf32.data(), pcmf32.size(), kWhisperSampleRate,
-                           kWhisperNFFT, kWhisperHopLength, kWhisperNMEL, 1,
-                           filters, mel)) {
+  pcmf32.resize((kSampleRate * kChunkSize), 0);
+  if (!log_mel_spectrogram(pcmf32.data(), pcmf32.size(), kSampleRate, kNFFT,
+                           kHopLength, kNMEL, 1, filters, mel)) {
     fprintf(stderr, "%s: failed to compute mel spectrogram\n", __func__);
     return -1;
   }

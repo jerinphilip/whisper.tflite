@@ -6,6 +6,8 @@
 
 #include "whisper.h"
 
+namespace whisper {
+
 class TFLiteEngine {
  public:
   TFLiteEngine() = default;
@@ -25,12 +27,13 @@ class TFLiteEngine {
   const char* decode(int token) { return vocab_.id_to_token.at(token).c_str(); }
 
   // Add any private members or helper functions as needed
-  WhisperTFLite whisper_;
-  WhisperVocab vocab_;
-  WhisperFilters filters_;
-  WhisperMel mel_;
+  TFLite whisper_;
+  Vocab vocab_;
+  Filters filters_;
+  Mel mel_;
 
   std::unique_ptr<char[]> vocab_holder_;
 };
+}  // namespace whisper
 
 #endif  // _TFLITEENGINE_H_

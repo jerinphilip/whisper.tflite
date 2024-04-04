@@ -4,7 +4,7 @@
 #include "TFLiteEngine.h"
 
 int main() {
-  TFLiteEngine engine;
+  whisper::TFLiteEngine engine;
   bool is_multilingual = false;
 
   // Load the TFLite model and vocabulary

@@ -28,6 +28,7 @@
     exit(1);                                               \
   }
 
+namespace whisper {
 int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
                             const bool isMultilingual) {
   std::cout << "Entering " << __func__ << "()" << '\n';
@@ -122,9 +123,9 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
     }
 
     // add additional vocab ids
-    int n_vocab_expected = kWhisperVocabEnSize;
+    int n_vocab_expected = kVocabEnSize;
     if (isMultilingual) {
-      n_vocab_expected = kWhisperVocabMultilingualSize;
+      n_vocab_expected = kVocabMultilingualSize;
       vocab_.token_eot++;
       vocab_.token_sot++;
       vocab_.token_prev++;
@@ -211,12 +212,12 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
   gettimeofday(&start_time, nullptr);
 
   // Hack if the audio file size is less than 30ms append with 0's
-  samples.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
+  samples.resize((kSampleRate * kChunkSize), 0);
   const auto processor_count = std::thread::hardware_concurrency();
 
-  if (!log_mel_spectrogram(samples.data(), samples.size(), kWhisperSampleRate,
-                           kWhisperNFFT, kWhisperHopLength, kWhisperNMEL,
-                           processor_count, filters_, mel_)) {
+  if (!log_mel_spectrogram(samples.data(), samples.size(), kSampleRate, kNFFT,
+                           kHopLength, kNMEL, processor_count, filters_,
+                           mel_)) {
     std::cerr << "Failed to compute mel_ spectrogram" << '\n';
     return "";
   }
@@ -263,7 +264,7 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
 
 std::string TFLiteEngine::transcribeFile(const char *waveFile) {
   std::vector<float> pcmf32 = readWAVFile(waveFile);
-  pcmf32.resize((kWhisperSampleRate * kWhisperChunkSize), 0);
+  pcmf32.resize((kSampleRate * kChunkSize), 0);
   std::string text = transcribeBuffer(pcmf32);
   return text;
 }
@@ -279,3 +280,4 @@ void TFLiteEngine::freeModel() {
 
   std::cout << "Exiting " << __func__ << "()" << '\n';
 }
+}  // namespace whisper
