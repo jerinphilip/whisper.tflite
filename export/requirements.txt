@@ -1,0 +1,11 @@
+protobuf
+tensorflow
+transformers
+numpy
+torch
+openai-whisper
+onnx_tf
+tensorflow-addons
+onnx
+optimum[onnxruntime]
+

@@ -1,0 +1,97 @@
+Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/
+Collecting git+https://github.com/openai/whisper.git
+  Cloning https://github.com/openai/whisper.git to /tmp/pip-req-build-1nc4rsn0
+  Running command git clone --filter=blob:none --quiet https://github.com/openai/whisper.git /tmp/pip-req-build-1nc4rsn0
+  Resolved https://github.com/openai/whisper.git to commit f5bfe004eccc3837a0d198baf7602ec7bccffafd
+  Preparing metadata (setup.py) ... done
+Requirement already satisfied: numpy in /usr/local/lib/python3.8/dist-packages (from openai-whisper==20230117) (1.21.6)
+Requirement already satisfied: torch in /usr/local/lib/python3.8/dist-packages (from openai-whisper==20230117) (1.13.1+cu116)
+Requirement already satisfied: tqdm in /usr/local/lib/python3.8/dist-packages (from openai-whisper==20230117) (4.64.1)
+Requirement already satisfied: more-itertools in /usr/local/lib/python3.8/dist-packages (from openai-whisper==20230117) (9.0.0)
+Collecting transformers>=4.19.0
+  Downloading transformers-4.25.1-py3-none-any.whl (5.8 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.8/5.8 MB 36.7 MB/s eta 0:00:00
+Collecting ffmpeg-python==0.2.0
+  Downloading ffmpeg_python-0.2.0-py3-none-any.whl (25 kB)
+Requirement already satisfied: future in /usr/local/lib/python3.8/dist-packages (from ffmpeg-python==0.2.0->openai-whisper==20230117) (0.16.0)
+Requirement already satisfied: regex!=2019.12.17 in /usr/local/lib/python3.8/dist-packages (from transformers>=4.19.0->openai-whisper==20230117) (2022.6.2)
+Collecting tokenizers!=0.11.3,<0.14,>=0.11.1
+  Downloading tokenizers-0.13.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (7.6 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.6/7.6 MB 61.1 MB/s eta 0:00:00
+Requirement already satisfied: filelock in /usr/local/lib/python3.8/dist-packages (from transformers>=4.19.0->openai-whisper==20230117) (3.9.0)
+Requirement already satisfied: requests in /usr/local/lib/python3.8/dist-packages (from transformers>=4.19.0->openai-whisper==20230117) (2.25.1)
+Requirement already satisfied: packaging>=20.0 in /usr/local/lib/python3.8/dist-packages (from transformers>=4.19.0->openai-whisper==20230117) (21.3)
+Requirement already satisfied: pyyaml>=5.1 in /usr/local/lib/python3.8/dist-packages (from transformers>=4.19.0->openai-whisper==20230117) (6.0)
+Collecting huggingface-hub<1.0,>=0.10.0
+  Downloading huggingface_hub-0.11.1-py3-none-any.whl (182 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 182.4/182.4 KB 13.7 MB/s eta 0:00:00
+Requirement already satisfied: typing-extensions in /usr/local/lib/python3.8/dist-packages (from torch->openai-whisper==20230117) (4.4.0)
+Requirement already satisfied: pyparsing!=3.0.5,>=2.0.2 in /usr/local/lib/python3.8/dist-packages (from packaging>=20.0->transformers>=4.19.0->openai-whisper==20230117) (3.0.9)
+Requirement already satisfied: idna<3,>=2.5 in /usr/local/lib/python3.8/dist-packages (from requests->transformers>=4.19.0->openai-whisper==20230117) (2.10)
+Requirement already satisfied: certifi>=2017.4.17 in /usr/local/lib/python3.8/dist-packages (from requests->transformers>=4.19.0->openai-whisper==20230117) (2022.12.7)
+Requirement already satisfied: urllib3<1.27,>=1.21.1 in /usr/local/lib/python3.8/dist-packages (from requests->transformers>=4.19.0->openai-whisper==20230117) (1.24.3)
+Requirement already satisfied: chardet<5,>=3.0.2 in /usr/local/lib/python3.8/dist-packages (from requests->transformers>=4.19.0->openai-whisper==20230117) (4.0.0)
+Building wheels for collected packages: openai-whisper
+  Building wheel for openai-whisper (setup.py) ... done
+  Created wheel for openai-whisper: filename=openai_whisper-20230117-py3-none-any.whl size=1179251 sha256=0aef6a04f940b08bc431debe2c084bf532fc37f25a2de50c9a81520743e8f587
+  Stored in directory: /tmp/pip-ephem-wheel-cache-aytjmsty/wheels/a7/70/18/b7693c07b1d18b3dafb328f5d0496aa0d41a9c09ef332fd8e6
+Successfully built openai-whisper
+Installing collected packages: tokenizers, ffmpeg-python, huggingface-hub, transformers, openai-whisper
+Successfully installed ffmpeg-python-0.2.0 huggingface-hub-0.11.1 openai-whisper-20230117 tokenizers-0.13.2 transformers-4.25.1
+Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/
+Collecting onnx
+  Downloading onnx-1.13.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (13.5 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 13.5/13.5 MB 74.7 MB/s eta 0:00:00
+Collecting protobuf<4,>=3.20.2
+  Downloading protobuf-3.20.3-cp38-cp38-manylinux_2_5_x86_64.manylinux1_x86_64.whl (1.0 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.0/1.0 MB 51.3 MB/s eta 0:00:00
+Requirement already satisfied: numpy>=1.16.6 in /usr/local/lib/python3.8/dist-packages (from onnx) (1.21.6)
+Requirement already satisfied: typing-extensions>=3.6.2.1 in /usr/local/lib/python3.8/dist-packages (from onnx) (4.4.0)
+Installing collected packages: protobuf, onnx
+  Attempting uninstall: protobuf
+    Found existing installation: protobuf 3.19.6
+    Uninstalling protobuf-3.19.6:
+      Successfully uninstalled protobuf-3.19.6
+ERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.
+tensorflow 2.9.2 requires protobuf<3.20,>=3.9.2, but you have protobuf 3.20.3 which is incompatible.
+tensorboard 2.9.1 requires protobuf<3.20,>=3.9.2, but you have protobuf 3.20.3 which is incompatible.
+Successfully installed onnx-1.13.0 protobuf-3.20.3
+Looking in indexes: https://pypi.org/simple, https://us-python.pkg.dev/colab-wheels/public/simple/
+Collecting onnx_tf
+  Downloading onnx_tf-1.10.0-py3-none-any.whl (226 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 226.1/226.1 KB 6.6 MB/s eta 0:00:00
+Requirement already satisfied: onnx>=1.10.2 in /usr/local/lib/python3.8/dist-packages (from onnx_tf) (1.13.0)
+Requirement already satisfied: PyYAML in /usr/local/lib/python3.8/dist-packages (from onnx_tf) (6.0)
+Collecting tensorflow-addons
+  Downloading tensorflow_addons-0.19.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (1.1 MB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.1/1.1 MB 29.0 MB/s eta 0:00:00
+Requirement already satisfied: typing-extensions>=3.6.2.1 in /usr/local/lib/python3.8/dist-packages (from onnx>=1.10.2->onnx_tf) (4.4.0)
+Requirement already satisfied: protobuf<4,>=3.20.2 in /usr/local/lib/python3.8/dist-packages (from onnx>=1.10.2->onnx_tf) (3.20.3)
+Requirement already satisfied: numpy>=1.16.6 in /usr/local/lib/python3.8/dist-packages (from onnx>=1.10.2->onnx_tf) (1.21.6)
+Requirement already satisfied: typeguard>=2.7 in /usr/local/lib/python3.8/dist-packages (from tensorflow-addons->onnx_tf) (2.7.1)
+Requirement already satisfied: packaging in /usr/local/lib/python3.8/dist-packages (from tensorflow-addons->onnx_tf) (21.3)
+Requirement already satisfied: pyparsing!=3.0.5,>=2.0.2 in /usr/local/lib/python3.8/dist-packages (from packaging->tensorflow-addons->onnx_tf) (3.0.9)
+Installing collected packages: tensorflow-addons, onnx_tf
+Successfully installed onnx_tf-1.10.0 tensorflow-addons-0.19.0
+Cloning into 'openai-whisper'...
+remote: Enumerating objects: 878, done.
+remote: Counting objects: 100% (182/182), done.
+remote: Compressing objects: 100% (145/145), done.
+remote: Total 878 (delta 47), reused 152 (delta 25), pack-reused 696
+Receiving objects: 100% (878/878), 256.34 MiB | 40.95 MiB/s, done.
+Resolving deltas: 100% (334/334), done.
+Updating files: 100% (407/407), done.
+Filtering content: 100% (6/6), 1.13 GiB | 86.08 MiB/s, done.
+Encountered 5 file(s) that should have been pointers, but weren't:
+	models/whisper-decoder_language.tflite
+	models/whisper-decoder_main.tflite
+	models/whisper-encoder-int8.tflite
+	models/whisper-encoder.tflite
+	models/whisper-int8.tflite
+Cloning into 'whisper'...
+remote: Enumerating objects: 388, done.
+remote: Counting objects: 100% (43/43), done.
+remote: Compressing objects: 100% (36/36), done.
+remote: Total 388 (delta 22), reused 18 (delta 6), pack-reused 345
+Receiving objects: 100% (388/388), 7.37 MiB | 21.93 MiB/s, done.
+Resolving deltas: 100% (225/225), done.
