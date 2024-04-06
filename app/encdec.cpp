@@ -178,7 +178,8 @@ struct Encoder {
 
 struct Decoder {
  public:
-  explicit Decoder(const std::string& path) : atom_(path) {}
+  explicit Decoder(const std::string& path, const whisper::Vocab& vocab)
+      : atom_(path), vocab_(vocab) {}
   std::vector<int64_t> forward(std::tuple<TfLiteTensor*, float*> encoder_out) {
     (void)encoder_out;
     auto* interpreter = atom_.interpreter();
@@ -193,10 +194,10 @@ struct Decoder {
     // [[50261 50359 50363  6142]]
     // NOLINTBEGIN
     std::vector<int64_t> prompt = {
-        50258,  // sot?
-        50261,  // de
-        50359,  // transcribe
-        50363,  // no-timestamps
+        vocab_.token_sot,
+        50261,                    // de
+        vocab_.token_transcribe,  // transcribe
+        vocab_.token_not,         // no-timestamps
     };
     // NOLINTEND
 
@@ -223,9 +224,9 @@ struct Decoder {
       return std::make_pair(max_index, max_value);
     };
 
-    int64_t eos_id = 50257;                    // NOLINT
+    int64_t eos_id = vocab_.token_eot;         // NOLINT
     constexpr size_t max_decoder_tokens = 30;  // NOLINT
-    constexpr size_t vocab_size = 51865;       // NOLINT
+    size_t vocab_size = vocab_.n_vocab;        // NOLINT
     int64_t num_prime_tokens = prompt.size();
     for (size_t i = prompt.size() - 1; i < max_decoder_tokens; i++) {
       interpreter->ResizeInputTensor(1, {1, static_cast<int>(prompt.size())});
@@ -267,6 +268,7 @@ struct Decoder {
 
  private:
   Atom atom_;
+  const whisper::Vocab& vocab_;
 };
 
 int run(const Options& options) {
@@ -397,7 +399,7 @@ int run(const Options& options) {
   Encoder encoder(options.encoder);
   auto encoder_out = encoder.forward(mel);
 
-  Decoder decoder(options.decoder);
+  Decoder decoder(options.decoder, vocab);
   std::vector<int64_t> decoded = decoder.forward(encoder_out);
   std::string surface;
   fprintf(stderr, "ids: ");
