@@ -14,7 +14,7 @@ int main() {
     model_path = "../../assets/whisper-tiny.tflite";
   }
 
-  int result = engine.loadModel(model_path, nullptr, is_multilingual);
+  int result = engine.create(model_path, nullptr, is_multilingual);
   if (result != 0) {
     std::cerr << "Error loading the TFLite model or vocabulary." << '\n';
     return 1;
@@ -24,7 +24,7 @@ int main() {
   const char* audio_file_path = "../../assets/jfk.wav";
   // audioFilePath = "../resources/MicInput.wav";
   audio_file_path = "../english_test_3_bili.wav";
-  std::string transcription = engine.transcribeFile(audio_file_path);
+  std::string transcription = engine.transcribe(audio_file_path);
   if (!transcription.empty()) {
     std::cout << "Transcription: " << transcription << '\n';
   } else {

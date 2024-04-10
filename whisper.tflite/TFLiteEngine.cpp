@@ -24,8 +24,8 @@
    1000)
 
 namespace whisper {
-int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
-                            const bool isMultilingual) {
+int TFLiteEngine::create(const char *modelPath, const char *vocabPath,
+                         const bool isMultilingual) {
   std::cout << "Entering " << __func__ << "()" << '\n';
 
   timeval start_time{};
@@ -170,7 +170,7 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
   return 0;
 }
 
-std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
+std::string TFLiteEngine::transcribe(std::vector<float> samples) {
   timeval start_time{};
   timeval end_time{};
   gettimeofday(&start_time, nullptr);
@@ -226,14 +226,14 @@ std::string TFLiteEngine::transcribeBuffer(std::vector<float> samples) {
   return text;
 }
 
-std::string TFLiteEngine::transcribeFile(const char *waveFile) {
+std::string TFLiteEngine::transcribe(const char *waveFile) {
   std::vector<float> pcmf32 = readWAVFile(waveFile);
   pcmf32.resize((kSampleRate * kChunkSize), 0);
-  std::string text = transcribeBuffer(pcmf32);
+  std::string text = transcribe(pcmf32);
   return text;
 }
 
-void TFLiteEngine::freeModel() {
+void TFLiteEngine::destroy() {
   std::cout << "Entering " << __func__ << "()" << '\n';
 
   if (whisper_.buffer) {

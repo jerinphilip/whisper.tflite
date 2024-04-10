@@ -14,12 +14,11 @@ class TFLiteEngine {
   ~TFLiteEngine() = default;
 
   // NOLINTBEGIN(readability-identifier-naming)
-  int loadModel(const char* modelPath, const char* vocabPath,
-                bool isMultilingual);
-  void freeModel();
+  int create(const char* modelPath, const char* vocabPath, bool isMultilingual);
+  void destroy();
 
-  std::string transcribeBuffer(std::vector<float> samples);
-  std::string transcribeFile(const char* waveFile);
+  std::string transcribe(std::vector<float> samples);
+  std::string transcribe(const char* waveFile);
   // NOLINTEND(readability-identifier-naming)
 
  private:

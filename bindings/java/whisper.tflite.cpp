@@ -22,33 +22,34 @@ JNIEXPORT jlong WTJ_JNI_EXPORT(WhisperEngineNative,
 
 // JNI method to load the model
 JNIEXPORT jint WTJ_JNI_EXPORT(WhisperEngineNative,
-                              loadModel)(JNIEnv *env, jobject /*thiz*/,
-                                         jlong nativePtr, jstring modelPath,
-                                         jstring vocabPath,
-                                         jboolean isMultilingual) {
+                              create)(JNIEnv *env, jobject /*thiz*/,
+                                      jlong nativePtr, jstring modelPath,
+                                      jstring vocabPath,
+                                      jboolean isMultilingual) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_model_path = env->GetStringUTFChars(modelPath, nullptr);
   const char *c_vocab_path = env->GetStringUTFChars(vocabPath, nullptr);
-  int result =
-      engine->loadModel(c_model_path, c_vocab_path, isMultilingual != 0U);
+  int result = engine->create(c_model_path, c_vocab_path, isMultilingual != 0U);
   env->ReleaseStringUTFChars(modelPath, c_model_path);
   return static_cast<jint>(result);
 }
 
 // JNI method to free the model
-JNIEXPORT void WTJ_JNI_EXPORT(WhisperEngineNative, freeModel)(JNIEnv * /*env*/,
-                                                              jobject /*thiz*/,
-                                                              jlong nativePtr) {
+JNIEXPORT void WTJ_JNI_EXPORT(WhisperEngineNative, destroy)(JNIEnv * /*env*/,
+                                                            jobject /*thiz*/,
+                                                            jlong nativePtr) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
-  engine->freeModel();
+  engine->destroy();
   delete engine;
 }
 
 // JNI method to transcribe audio buffer
-JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative, transcribeBuffer)(
-    JNIEnv *env, jobject /*thiz*/, jlong nativePtr, jfloatArray samples) {
+JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative,
+                                 transcribe)(JNIEnv *env, jobject /*thiz*/,
+                                             jlong nativePtr,
+                                             jfloatArray samples) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
 
@@ -58,7 +59,7 @@ JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative, transcribeBuffer)(
   std::vector<float> sample_vector(data, data + len);
   env->ReleaseFloatArrayElements(samples, data, 0);
 
-  std::string result = engine->transcribeBuffer(sample_vector);
+  std::string result = engine->transcribe(sample_vector);
   return env->NewStringUTF(result.c_str());
 }
 
@@ -70,7 +71,7 @@ JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative,
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_wave_file = env->GetStringUTFChars(waveFile, nullptr);
-  std::string result = engine->transcribeFile(c_wave_file);
+  std::string result = engine->transcribe(c_wave_file);
   env->ReleaseStringUTFChars(waveFile, c_wave_file);
   return env->NewStringUTF(result.c_str());
 }
