@@ -1,12 +1,14 @@
 #!/bin/bash
 
+export TF_CPP_MIN_LOG_LEVEL="3"
 WAV=$1
 set -x
 
 ./build/app/minimal \
   ../whisper.tflite/models/whisper-tiny-en.tflite \
-  data/openai.whisper.tiny/tflt_vocab_mel.bin \
+  data/openai.whisper.tiny/filters_vocab_en.bin \
   ./samples/english_test_3_bili.wav
+# data/openai.whisper.tiny/tflt_vocab_mel.bin \
 
 ./build/app/encdec \
   --encoder "export/workspace/aware-ai-whisper-tiny-german.encoder.tflite" \
