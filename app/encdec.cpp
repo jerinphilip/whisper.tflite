@@ -85,15 +85,8 @@ int run(const Options& options) {
   auto encoder_out = encoder.forward(mel);
 
   Decoder decoder(options.decoder, vocab);
-  std::vector<int64_t> decoded = decoder.forward(encoder_out);
-  std::string surface;
-  fprintf(stderr, "ids: ");
-  for (auto& id : decoded) {
-    fprintf(stderr, "%zu ", id);
-    if (id < vocab.n_vocab) {
-      surface += vocab.id_to_token[id];
-    }
-  }
+  std::vector<int64_t> generated = decoder.forward(encoder_out);
+  std::string surface = decode(vocab, generated);
   fprintf(stderr, "\n");
   fprintf(stderr, "surface: [%s]\n", surface.c_str());
 

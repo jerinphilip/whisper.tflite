@@ -676,4 +676,17 @@ void MmapFile::reset() {
   size_ = 0;
 }
 
+std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
+                   bool omit_special_tokens /*=false*/) {
+  std::string surface;
+  for (const auto& id : generated) {
+    if (!omit_special_tokens || id < vocab.token_eot) {
+      auto query = vocab.id_to_token.find(id);
+      assert(query != vocab.id_to_token.end());
+      surface += query->second;
+    }
+  }
+  return surface;
+}
+
 }  // namespace whisper

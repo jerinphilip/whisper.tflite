@@ -234,5 +234,8 @@ class MmapFile {
   size_t size_ = 0;
 };
 
+std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
+                   bool omit_special_tokens = false);
+
 }  // namespace whisper
 #endif  // _WHISPER_H_
