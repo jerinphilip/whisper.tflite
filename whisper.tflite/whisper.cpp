@@ -689,7 +689,7 @@ std::string Monolith::transcribe(const char* waveFile) {
   return text;
 }
 
-std::string Monolith::transcribe(std::vector<float> samples) {
+std::string Monolith::transcribe(std::vector<float>& samples) {
   timeval start_time{};
   timeval end_time{};
   gettimeofday(&start_time, nullptr);
@@ -746,12 +746,10 @@ EncDec::EncDec(const std::string& model_prefix, const std::string& vocab_path,
   const char* ptr =
       reinterpret_cast<const char*>(vocab_file_.data()) + sizeof(int64_t);
   Reader reader(ptr, multilingual);
-  Vocab vocab;
-  Filters filters;
-  reader.read(filters, vocab);
+  reader.read(filters_, vocab_);
 }
 
-std::string EncDec::transcribe(std::vector<float> samples) {
+std::string EncDec::transcribe(std::vector<float>& samples) {
   samples.resize((kSampleRate * kChunkSize), 0);
   const auto processor_count = std::thread::hardware_concurrency();
 

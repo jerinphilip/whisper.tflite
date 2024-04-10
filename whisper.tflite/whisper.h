@@ -157,7 +157,7 @@ struct Decoder {
 };
 
 struct Engine {
-  virtual std::string transcribe(std::vector<float> samples) = 0;
+  virtual std::string transcribe(std::vector<float>& samples) = 0;
   virtual std::string transcribe(const char* waveFile) = 0;
   virtual ~Engine() = default;
 };
@@ -166,7 +166,7 @@ struct Monolith : public Engine {
  public:
   Monolith(const std::string& model_prefix, const std::string& vocab_path,
            bool multilingual);
-  std::string transcribe(std::vector<float> samples) final;
+  std::string transcribe(std::vector<float>& samples) final;
   std::string transcribe(const char* waveFile) final;
 
  private:
@@ -182,7 +182,7 @@ struct EncDec : public Engine {
  public:
   EncDec(const std::string& model_prefix, const std::string& vocab_path,
          bool multilingual);
-  std::string transcribe(std::vector<float> samples) final;
+  std::string transcribe(std::vector<float>& samples) final;
   std::string transcribe(const char* waveFile) final;
 
  private:
