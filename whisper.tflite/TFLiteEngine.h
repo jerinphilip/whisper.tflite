@@ -31,7 +31,7 @@ class TFLiteEngine {
   Filters filters_;
   Mel mel_;
 
-  std::unique_ptr<char[]> vocab_holder_;
+  MmapFile vocab_file_;
 };
 }  // namespace whisper
 

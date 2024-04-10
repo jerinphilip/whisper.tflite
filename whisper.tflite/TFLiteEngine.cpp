@@ -41,83 +41,18 @@ int TFLiteEngine::create(const char *modelPath, const char *vocabPath,
       return -1;
     }
 
-    uint64_t vocab_size = 0;
-    fread(&vocab_size, sizeof(uint64_t), 1, vocab_fp);
-    vocab_holder_ = std::make_unique<char[]>(vocab_size);
-    fread(vocab_holder_.get(), vocab_size, 1, vocab_fp);
-    fclose(vocab_fp);
+    int64_t vocab_size;
+    vocab_file_ = std::move(MmapFile(vocabPath));
+    const char *ptr = static_cast<const char *>(vocab_file_.data());
+    std::memcpy(&vocab_size, ptr, sizeof(uint64_t));
 
-    const char *vocab_data =
-        reinterpret_cast<const char *>(vocab_holder_.get());
+    ptr = ptr + sizeof(uint64_t);
+    Reader reader(ptr, isMultilingual);
 
-    int magic = 0;
-    std::memcpy(&magic, vocab_data, sizeof(magic));
-    vocab_data += sizeof(magic);
-
-    // Check the magic number
-    constexpr int kVocabMagic = 0x57535052;
-    if (magic != kVocabMagic) {  // 'WSPR'
-      std::cerr << "Invalid vocab data (bad magic)" << '\n';
-      return -1;
-    }
-
-    // Load mel_ filters_
-    std::memcpy(&filters_.n_mel, vocab_data, sizeof(filters_.n_mel));
-    vocab_data += sizeof(filters_.n_mel);
-
-    std::memcpy(&filters_.n_fft, vocab_data, sizeof(filters_.n_fft));
-    vocab_data += sizeof(filters_.n_fft);
-
-    std::cout << "n_mel:" << filters_.n_mel << " n_fft:" << filters_.n_fft
-              << '\n';
-
-    filters_.data.resize(filters_.n_mel * filters_.n_fft);
-    std::memcpy(filters_.data.data(), vocab_data,
-                filters_.data.size() * sizeof(float));
-    vocab_data += filters_.data.size() * sizeof(float);
-
-    // Load vocab
-    int n_vocab = 0;
-    std::memcpy(&n_vocab, vocab_data, sizeof(n_vocab));
-    vocab_data += sizeof(n_vocab);
-
-    std::cout << "n_vocab:" << n_vocab << '\n';
-
-    for (int i = 0; i < n_vocab; i++) {
-      int len = 0;
-      std::memcpy(&len, vocab_data, sizeof(len));
-      vocab_data += sizeof(len);
-
-      std::string word(vocab_data, len);
-      vocab_data += len;
-
-      vocab_.id_to_token[i] = word;
-    }
-
+    reader.read(filters_, vocab_);
     // add additional vocab ids
     int n_vocab_expected = kVocabEnSize;
     transform_vocab_multilingual(vocab_);
-
-    for (int i = n_vocab; i < n_vocab_expected; i++) {
-      std::string word;
-      if (i > vocab_.token_beg) {
-        word = "[_TT_" + std::to_string(i - vocab_.token_beg) + "]";
-      } else if (i == vocab_.token_eot) {
-        word = "[_EOT_]";
-      } else if (i == vocab_.token_sot) {
-        word = "[_SOT_]";
-      } else if (i == vocab_.token_prev) {
-        word = "[_PREV_]";
-      } else if (i == vocab_.token_not) {
-        word = "[_NOT_]";
-      } else if (i == vocab_.token_beg) {
-        word = "[_BEG_]";
-      } else {
-        word = "[_extra_token_" + std::to_string(i) + "]";
-      }
-      vocab_.id_to_token[i] = word;
-      // printf("%s: vocab_[%d] = '%s'", __func__, i, word.c_str());
-    }
 
     /////////////// Load tflite model buffer ///////////////
 

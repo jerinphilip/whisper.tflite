@@ -164,8 +164,11 @@ struct Decoder {
 
 void inspect_tflite_tensor(const char* name, const TfLiteTensor& tensor);
 
+using LangKey = std::pair<std::string, std::string>;
+extern std::vector<LangKey> language_meta;
 // https://github.com/openai/whisper/blob/ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab/whisper/tokenizer.py#L10
 int language_id(const std::string& code);
+const std::string& lang_code(size_t id);
 
 // Vocab file layout.
 //
@@ -191,14 +194,15 @@ int language_id(const std::string& code);
 // };
 struct Reader {
  public:
-  explicit Reader(char* head, bool multilingual)
+  explicit Reader(const char* head, bool multilingual)
       : head_(head), multilingual_(multilingual) {}
   void read(Filters& filters, Vocab& vocab);
 
  private:
-  static char* read_filters(Filters& filters, char* head);
-  static char* read_vocab(Vocab& vocab, bool multilingual, char* head);
-  char* head_;
+  static const char* read_filters(Filters& filters, const char* head);
+  static const char* read_vocab(Vocab& vocab, bool multilingual,
+                                const char* head);
+  const char* head_;
   bool multilingual_;
 };
 

@@ -90,7 +90,9 @@ int run(const Options& options) {
   fprintf(stderr, "ids: ");
   for (auto& id : decoded) {
     fprintf(stderr, "%zu ", id);
-    surface += vocab.id_to_token[id];
+    if (id < vocab.n_vocab) {
+      surface += vocab.id_to_token[id];
+    }
   }
   fprintf(stderr, "\n");
   fprintf(stderr, "surface: [%s]\n", surface.c_str());
