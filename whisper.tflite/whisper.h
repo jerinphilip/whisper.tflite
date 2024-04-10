@@ -87,17 +87,6 @@ struct Vocab {
   // NOLINTEND(readability-magic-numbers)
 };
 
-struct TFLite {
-  char* buffer = nullptr;
-  int64_t size = 0;
-  std::unique_ptr<tflite::FlatBufferModel> model;
-  tflite::ops::builtin::BuiltinOpResolver resolver;
-  std::unique_ptr<tflite::Interpreter> interpreter;
-  float* input;
-
-  bool is_whisper_tflite_initialized = false;
-};
-
 struct Filters {
   int n_mel;
   int n_fft;
@@ -136,7 +125,7 @@ struct Atom {
   tflite::Interpreter* interpreter() { return interpreter_.get(); }
 
  private:
-  std::unique_ptr<tflite::FlatBufferModel> model_;
+  std::unique_ptr<tflite::FlatBufferModel> model_ = nullptr;
   tflite::ops::builtin::BuiltinOpResolver resolver_;
   tflite::InterpreterBuilder builder_;
   std::unique_ptr<tflite::Interpreter> interpreter_;

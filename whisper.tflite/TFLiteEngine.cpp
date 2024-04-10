@@ -32,7 +32,7 @@ int TFLiteEngine::create(const char *modelPath, const char *vocabPath,
 
   timeval start_time{};
   timeval end_time{};
-  if (!whisper_.is_whisper_tflite_initialized) {
+  if (whisper_ == nullptr) {
     gettimeofday(&start_time, nullptr);
     std::cout << "Initializing TFLite..." << '\n';
 
@@ -52,48 +52,7 @@ int TFLiteEngine::create(const char *modelPath, const char *vocabPath,
     Reader reader(ptr, isMultilingual);
     reader.read(filters_, vocab_);
 
-    /////////////// Load tflite model buffer ///////////////
-
-    // Open the TFLite model file for reading
-    std::ifstream model_file(modelPath, std::ios::binary | std::ios::ate);
-    if (!model_file.is_open()) {
-      std::cerr << "Unable to open model file: " << modelPath << '\n';
-      return -1;
-    }
-
-    // Get the size of the model file
-    std::streamsize size = model_file.tellg();
-    model_file.seekg(0, std::ios::beg);
-
-    // Allocate memory for the model buffer
-    char *buffer = new char[size];
-
-    // Read the model data into the buffer
-    if (model_file.read(buffer, size)) {
-      model_file.close();
-    } else {
-      std::cerr << "Error reading model data from file." << '\n';
-    }
-
-    whisper_.size = size;
-    whisper_.buffer = buffer;
-
-    whisper_.model = tflite::FlatBufferModel::BuildFromBuffer(whisper_.buffer,
-                                                              whisper_.size);
-    TFLITE_MINIMAL_CHECK(whisper_.model != nullptr);
-
-    // Build the interpreter with the InterpreterBuilder.
-    tflite::InterpreterBuilder builder(*(whisper_.model), whisper_.resolver);
-
-    builder(&(whisper_.interpreter));
-    TFLITE_MINIMAL_CHECK(whisper_.interpreter != nullptr);
-
-    // Allocate tensor buffers.
-    TFLITE_MINIMAL_CHECK(whisper_.interpreter->AllocateTensors() == kTfLiteOk);
-
-    whisper_.input = whisper_.interpreter->typed_input_tensor<float>(0);
-    whisper_.is_whisper_tflite_initialized = true;
-
+    whisper_ = std::make_unique<Atom>(modelPath);
     gettimeofday(&end_time, nullptr);
     std::cout << "Time taken for TFLite initialization: "
               << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
@@ -123,13 +82,14 @@ std::string TFLiteEngine::transcribe(std::vector<float> samples) {
   std::cout << "Time taken for Spectrogram: "
             << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
 
-  memcpy(whisper_.input, mel_.data.data(),
-         mel_.n_mel * mel_.n_len * sizeof(float));
+  auto *interpreter = whisper_->interpreter();
+  auto *input = interpreter->typed_input_tensor<float>(0);
+  memcpy(input, mel_.data.data(), mel_.n_mel * mel_.n_len * sizeof(float));
   gettimeofday(&start_time, nullptr);
 
   // Run inference
-  whisper_.interpreter->SetNumThreads(processor_count);
-  if (whisper_.interpreter->Invoke() != kTfLiteOk) {
+  interpreter->SetNumThreads(processor_count);
+  if (interpreter->Invoke() != kTfLiteOk) {
     return "";
   }
 
@@ -137,12 +97,12 @@ std::string TFLiteEngine::transcribe(std::vector<float> samples) {
   std::cout << "Time taken for Interpreter: "
             << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
 
-  int output = whisper_.interpreter->outputs()[0];
-  TfLiteTensor *output_tensor = whisper_.interpreter->tensor(output);
+  int output = interpreter->outputs()[0];
+  TfLiteTensor *output_tensor = interpreter->tensor(output);
   TfLiteIntArray *output_dims = output_tensor->dims;
   // assume output dims to be something like (1, 1, ... ,size)
   auto output_size = output_dims->data[output_dims->size - 1];
-  int *output_int = whisper_.interpreter->typed_output_tensor<int>(0);
+  int *output_int = interpreter->typed_output_tensor<int>(0);
   bool omit_special_tokens = false;
   std::string text =
       decode(vocab_, output_int, output_int + output_size, omit_special_tokens);
@@ -157,15 +117,4 @@ std::string TFLiteEngine::transcribe(const char *waveFile) {
   return text;
 }
 
-void TFLiteEngine::destroy() const {
-  std::cout << "Entering " << __func__ << "()" << '\n';
-
-  if (whisper_.buffer) {
-    std::cout << __func__ << ": free buffer " << whisper_.buffer << " memory"
-              << '\n';
-    delete[] whisper_.buffer;
-  }
-
-  std::cout << "Exiting " << __func__ << "()" << '\n';
-}
 }  // namespace whisper

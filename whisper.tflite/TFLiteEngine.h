@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -22,7 +23,7 @@ class TFLiteEngine {
 
  private:
   // Add any private members or helper functions as needed
-  TFLite whisper_;
+  std::unique_ptr<Atom> whisper_;
   Vocab vocab_;
   Filters filters_;
   Mel mel_;
