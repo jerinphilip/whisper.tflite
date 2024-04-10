@@ -50,11 +50,7 @@ int TFLiteEngine::create(const char *modelPath, const char *vocabPath,
 
     ptr = ptr + sizeof(uint64_t);
     Reader reader(ptr, isMultilingual);
-
     reader.read(filters_, vocab_);
-    // add additional vocab ids
-    int n_vocab_expected = kVocabEnSize;
-    transform_vocab_multilingual(vocab_);
 
     /////////////// Load tflite model buffer ///////////////
 
