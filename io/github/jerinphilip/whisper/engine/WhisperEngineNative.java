@@ -58,7 +58,8 @@ public class WhisperEngineNative implements IWhisperEngine {
   }
 
   static {
-    System.loadLibrary("audioEngine");
+    System.loadLibrary("whisper-tflite");
+    System.loadLibrary("whisper-tflite-jni");
   }
 
   // Native methods
