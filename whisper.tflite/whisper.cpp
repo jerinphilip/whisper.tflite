@@ -765,8 +765,6 @@ std::string EncDec::transcribe(std::vector<float>& samples) {
   std::vector<int64_t> generated = decoder_.forward(encoder_out);
   bool omit_special_tokens = false;
   std::string surface = decode(vocab_, generated, omit_special_tokens);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "surface: [%s]\n", surface.c_str());
   return surface;
 }
 
