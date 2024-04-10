@@ -21,9 +21,6 @@ class TFLiteEngine {
   // NOLINTEND(readability-identifier-naming)
 
  private:
-  // Convert a token to a string
-  const char* decode(int token) { return vocab_.id_to_token.at(token).c_str(); }
-
   // Add any private members or helper functions as needed
   TFLite whisper_;
   Vocab vocab_;

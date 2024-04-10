@@ -146,19 +146,10 @@ std::string TFLiteEngine::transcribe(std::vector<float> samples) {
   TfLiteIntArray *output_dims = output_tensor->dims;
   // assume output dims to be something like (1, 1, ... ,size)
   auto output_size = output_dims->data[output_dims->size - 1];
-
   int *output_int = whisper_.interpreter->typed_output_tensor<int>(0);
-  std::string text;
-
-  for (int i = 0; i < output_size; i++) {
-    if (output_int[i] == vocab_.token_eot) {
-      break;
-    }
-
-    if (output_int[i] < vocab_.token_eot) {
-      text += decode(output_int[i]);
-    }
-  }
+  bool omit_special_tokens = true;
+  std::string text =
+      decode(vocab_, output_int, output_int + output_size, omit_special_tokens);
 
   return text;
 }
