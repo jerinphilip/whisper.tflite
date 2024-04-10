@@ -1,32 +1,30 @@
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 
-#define SAMPLE_RATE (44100)
-#define FRAME_SIZE (512)
-#define BUFFER_SIZE (2048)
+enum { SAMPLE_RATE = (44100), FRAME_SIZE = (512), BUFFER_SIZE = (2048) };
 #define VAD_THRESHOLD (0.01f)
 
-typedef struct {
+using Frame = struct {
   float buffer[BUFFER_SIZE];
   float energy;
-} Frame;
+};
 
-int main(void) {
+int main() {
   FILE *fp = fopen("audio.raw", "rb");  // Replace with your input file
-  if (fp == NULL) {
+  if (fp == nullptr) {
     fprintf(stderr, "Error opening input file.\n");
     return 1;
   }
 
   float buffer[BUFFER_SIZE];
   Frame frame = {0};
-  int isSpeech = 0;
-  int numFrames = 0;
+  int is_speech = 0;
+  int num_frames = 0;
 
   while (fread(buffer, sizeof(float), BUFFER_SIZE, fp) == BUFFER_SIZE) {
     for (int i = 0; i < BUFFER_SIZE; i += FRAME_SIZE) {
-      frame.energy = 0.0f;
+      frame.energy = 0.0F;
 
       for (int j = i; j < i + FRAME_SIZE; j++) {
         frame.buffer[j - i] = buffer[j];
@@ -36,13 +34,13 @@ int main(void) {
       frame.energy = sqrt(frame.energy / FRAME_SIZE);
 
       if (frame.energy > VAD_THRESHOLD) {
-        isSpeech = 1;
+        is_speech = 1;
       } else {
-        isSpeech = 0;
+        is_speech = 0;
       }
 
-      printf("Frame %d: %s\n", numFrames, isSpeech ? "Speech" : "Silence");
-      numFrames++;
+      printf("Frame %d: %s\n", num_frames, is_speech ? "Speech" : "Silence");
+      num_frames++;
     }
   }
 

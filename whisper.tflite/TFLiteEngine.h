@@ -1,5 +1,4 @@
-#ifndef _TFLITEENGINE_H_
-#define _TFLITEENGINE_H_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -14,26 +13,20 @@ class TFLiteEngine {
   ~TFLiteEngine() = default;
 
   // NOLINTBEGIN(readability-identifier-naming)
-  int loadModel(const char* modelPath, const char* vocabPath,
-                bool isMultilingual);
-  void freeModel();
+  int create(const char* modelPath, const char* vocabPath, bool isMultilingual);
+  void destroy() const;
 
-  std::string transcribeBuffer(std::vector<float> samples);
-  std::string transcribeFile(const char* waveFile);
+  std::string transcribe(std::vector<float> samples);
+  std::string transcribe(const char* waveFile);
   // NOLINTEND(readability-identifier-naming)
 
  private:
-  // Convert a token to a string
-  const char* decode(int token) { return vocab_.id_to_token.at(token).c_str(); }
-
   // Add any private members or helper functions as needed
   TFLite whisper_;
   Vocab vocab_;
   Filters filters_;
   Mel mel_;
 
-  std::unique_ptr<char[]> vocab_holder_;
+  MmapFile vocab_file_;
 };
 }  // namespace whisper
-
-#endif  // _TFLITEENGINE_H_

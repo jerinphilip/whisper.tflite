@@ -1,6 +1,6 @@
-package com.whispertflite.engine;
+package io.github.jerinphilip.whisper.engine;
 
-import com.whispertflite.asr.IWhisperListener;
+import io.github.jerinphilip.whisper.asr.IWhisperListener;
 import java.io.IOException;
 
 public interface IWhisperEngine {

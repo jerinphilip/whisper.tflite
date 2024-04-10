@@ -17,7 +17,6 @@ limitations under the License.
 
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -41,10 +40,6 @@ int main(int argc, char* argv[]) {
   using namespace whisper;
 
   const char* filename = argv[1];
-  Mel mel;  // Use the correct struct from whisper.h
-  struct timeval start_time;
-  struct timeval end_time;
-  Vocab vocab;
 
   uint64_t vocab_size;
   FILE* vocab_fp = fopen(argv[2], "rb");
@@ -53,61 +48,17 @@ int main(int argc, char* argv[]) {
   fread(vocab_holder.get(), vocab_size, 1, vocab_fp);
   fclose(vocab_fp);
 
-  // Create a pointer to the start of the unsigned char array
-  char* ptr = vocab_holder.get();
-  // Read the magic number
-  uint32_t magic = 0;
-  memcpy(&magic, ptr, sizeof(magic));
-  // tflt
-  constexpr uint32_t kTFLTExpectedMagic = 0x74666C74;
-  if (magic != kTFLTExpectedMagic) {
-    printf("Invalid vocab file (bad magic)\n");
-    return 0;
-  }
-  ptr += sizeof(magic);  // Move the pointer to the next position
-
-  Filters filters;  // Use the correct struct from whisper.h
-  // Load mel filters
-  memcpy(&filters.n_mel, ptr, sizeof(filters.n_mel));
-  ptr += sizeof(filters.n_mel);
-
-  memcpy(&filters.n_fft, ptr, sizeof(filters.n_fft));
-  ptr += sizeof(filters.n_fft);
-
-  // Allocate memory for the vector and copy data
-  filters.data.resize(filters.n_mel * filters.n_fft);
-  memcpy(filters.data.data(), ptr,
-         filters.n_mel * filters.n_fft * sizeof(float));
-  ptr += filters.n_mel * filters.n_fft * sizeof(float);
-
-  // Load vocab
-  int32_t n_vocab = 0;
-  memcpy(&n_vocab, ptr, sizeof(n_vocab));
-  ptr += sizeof(n_vocab);
-
-  // Update the vocabulary size based on whisper.h
-  vocab.n_vocab = n_vocab;
-  printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
-
-  // Assuming a maximum word length of 255 characters
-  constexpr size_t kMaxBufferSize = 256;
-  char word[kMaxBufferSize];
-  for (int i = 0; i < n_vocab; i++) {
-    uint32_t len;
-    memcpy(&len, ptr, sizeof(len));
-    ptr += sizeof(len);
-
-    memcpy(word, ptr, len);
-    word[len] = '\0';  // Null-terminate the string
-    ptr += len;
-
-    vocab.id_to_token[i] = std::string(word);
-  }
+  Filters filters;
+  Vocab vocab;
+  bool multilingual = false;
+  Reader reader(vocab_holder.get(), multilingual);
+  reader.read(filters, vocab);
 
   // Generate input_features for Audio file
   const char* pcmfilename = argv[3];
   // WAV input
 
+  Mel mel;
   // Hack if the audio file size is less than 30ms, append with 0's
   std::vector<float> pcmf32 = wav_read(pcmfilename);
   pcmf32.resize((kSampleRate * kChunkSize), 0);
@@ -147,6 +98,8 @@ int main(int argc, char* argv[]) {
          mel.n_mel * mel.n_len *
              sizeof(float));  // Update to use the correct struct members
 
+  struct timeval start_time;
+  struct timeval end_time;
   gettimeofday(&start_time, nullptr);
   // Run inference
   TFLITE_MINIMAL_CHECK(interpreter->Invoke() == kTfLiteOk);
@@ -159,20 +112,9 @@ int main(int argc, char* argv[]) {
   TfLiteIntArray* output_dims = output_tensor->dims;
   auto output_size = output_dims->data[output_dims->size - 1];
   int* output_int = interpreter->typed_output_tensor<int>(0);
-  std::string text;
-  auto decode = [&vocab](int token) {
-    // Empty
-    return vocab.id_to_token.at(token).c_str();
-  };
-
-  for (int i = 0; i < output_size; i++) {
-    if (output_int[i] == vocab.token_eot) {
-      break;
-    }
-    if (output_int[i] < vocab.token_eot) {
-      text += decode(output_int[i]);
-    }
-  }
+  bool omit_special_tokens = true;
+  std::string text =
+      decode(vocab, output_int, output_int + output_size, omit_special_tokens);
 
   // Remove extra spaces between words
   text = remove_extra_spaces(text);

@@ -7,11 +7,24 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
+#include <iterator>
+#include <stdexcept>
+#include <string>
 #include <thread>
+#include <tuple>
+#include <utility>
 #include <vector>
 
+#include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
@@ -393,10 +406,8 @@ std::vector<int64_t> Decoder::forward(
   return prompt;
 }
 
-int language_id(const std::string& code) {
-  using Key = std::pair<std::string, std::string>;
-  const static std::vector<Key> kMetadata = {
-      // clang-format off
+std::vector<LangKey> language_meta = {
+    // clang-format off
       { "en", "english"},
       { "zh", "chinese"},
       { "de", "german"},
@@ -497,15 +508,19 @@ int language_id(const std::string& code) {
       { "jw", "javanese"},
       { "su", "sundanese"},
       { "yue", "cantonese"},
-      // clang-format on
-  };
+    // clang-format on
+};
 
-  auto predicate = [&code](const Key& key) { return key.first == code; };
-  auto needle = std::find_if(kMetadata.begin(), kMetadata.end(), predicate);
-  return std::distance(kMetadata.begin(), needle);
+int language_id(const std::string& code) {
+  auto predicate = [&code](const LangKey& key) { return key.first == code; };
+  auto needle =
+      std::find_if(language_meta.begin(), language_meta.end(), predicate);
+  return std::distance(language_meta.begin(), needle);
 }
 
-char* Reader::read_filters(Filters& filters, char* head) {
+const std::string& lang_code(size_t id) { return language_meta[id].first; }
+
+const char* Reader::read_filters(Filters& filters, const char* head) {
   // Read the magic number
   uint32_t magic = 0;
   memcpy(&magic, head, sizeof(magic));
@@ -533,7 +548,8 @@ char* Reader::read_filters(Filters& filters, char* head) {
   return head;
 }
 
-char* Reader::read_vocab(Vocab& vocab, char* head) {
+const char* Reader::read_vocab(Vocab& vocab, bool multilingual,
+                               const char* head) {
   int32_t n_vocab = 0;
   memcpy(&n_vocab, head, sizeof(n_vocab));
   head += sizeof(n_vocab);
@@ -543,7 +559,9 @@ char* Reader::read_vocab(Vocab& vocab, char* head) {
   printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
 
   // TODO(@jerinphilip): Specialization, fix somehow.
-  transform_vocab_multilingual(vocab);
+  if (multilingual) {
+    transform_vocab_multilingual(vocab);
+  }
 
   // Assuming a maximum word length of 255 characters
   constexpr size_t kMaxBufferSize = 256;
@@ -559,12 +577,41 @@ char* Reader::read_vocab(Vocab& vocab, char* head) {
 
     vocab.id_to_token[i] = std::string(word);
   }
+
+  const size_t n_vocab_expected = kVocabEnSize + static_cast<int>(multilingual);
+  for (int i = n_vocab; i < n_vocab_expected; i++) {
+    std::string word;
+    if (i > vocab.token_beg) {
+      word = "<|TT" + std::to_string(i - vocab.token_beg) + "|>";
+    } else if (i == vocab.token_eot) {
+      word = "<|endoftranscript|>";
+    } else if (i == vocab.token_sot) {
+      word = "<|startoftranscript_|>";
+    } else if (i == vocab.token_prev) {
+      word = "<|PREV|>";
+    } else if (i == vocab.token_not) {
+      word = "<|notimestamps|>";
+    } else if (i == vocab.token_beg) {
+      word = "<|timestampbegin|>";
+    } else if (i == vocab.token_translate) {
+      word = "<|translate|>";
+    } else if (i == vocab.token_transcribe) {
+      word = "<|transcribe|>";
+    } else if (i > vocab.token_sot && i < vocab.token_translate) {
+      int base = vocab.token_sot + 1;
+      word = "<|lang-" + lang_code(i - base) + "|>";
+    } else {
+      word = "<|e" + std::to_string(i) + "|>";
+    }
+    vocab.id_to_token[i] = word;
+    // printf("%s: vocab[%d] = '%s'", __func__, i, word.c_str());
+  }
   return head;
 }
 
 void Reader::read(Filters& filters, Vocab& vocab) {
   head_ = read_filters(filters, head_);
-  head_ = read_vocab(vocab, head_);
+  head_ = read_vocab(vocab, multilingual_, head_);
 }
 
 std::string remove_extra_spaces(const std::string& input) {
@@ -640,6 +687,40 @@ void MmapFile::reset() {
   fd_ = -1;
   data_ = nullptr;
   size_ = 0;
+}
+
+// Range templates
+template <class Int>
+std::string decode(const Vocab& vocab, const Int* begin, const Int* end,
+                   bool omit_special_tokens /*=false*/) {
+  std::string surface;
+  for (const Int* p = begin; p != end; p++) {
+    int id = *p;
+    if (!omit_special_tokens || id < vocab.token_eot) {
+      auto query = vocab.id_to_token.find(id);
+      assert(query != vocab.id_to_token.end());
+      surface += query->second;
+    }
+
+    if (id == vocab.token_eot) {
+      break;
+    }
+  }
+  return surface;
+}
+
+// Template specializations
+template std::string decode(const Vocab& vocab, const int* begin,
+                            const int* end, bool omit_special_tokens);
+
+template std::string decode(const Vocab& vocab, const int64_t* begin,
+                            const int64_t* end, bool omit_special_tokens);
+
+// Convenience on vector, relays into range based functions.
+std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
+                   bool omit_special_tokens) {
+  return decode(vocab, generated.data(), generated.data() + generated.size(),
+                omit_special_tokens);
 }
 
 }  // namespace whisper

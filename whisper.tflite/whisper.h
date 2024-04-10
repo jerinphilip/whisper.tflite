@@ -1,5 +1,4 @@
-#ifndef _WHISPER_H_
-#define _WHISPER_H_
+#pragma once
 
 #include <cstdint>
 #include <map>
@@ -164,8 +163,11 @@ struct Decoder {
 
 void inspect_tflite_tensor(const char* name, const TfLiteTensor& tensor);
 
+using LangKey = std::pair<std::string, std::string>;
+extern std::vector<LangKey> language_meta;
 // https://github.com/openai/whisper/blob/ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab/whisper/tokenizer.py#L10
 int language_id(const std::string& code);
+const std::string& lang_code(size_t id);
 
 // Vocab file layout.
 //
@@ -191,13 +193,16 @@ int language_id(const std::string& code);
 // };
 struct Reader {
  public:
-  explicit Reader(char* head) : head_(head) {}
+  explicit Reader(const char* head, bool multilingual)
+      : head_(head), multilingual_(multilingual) {}
   void read(Filters& filters, Vocab& vocab);
 
  private:
-  static char* read_filters(Filters& filters, char* head);
-  static char* read_vocab(Vocab& vocab, char* head);
-  char* head_;
+  static const char* read_filters(Filters& filters, const char* head);
+  static const char* read_vocab(Vocab& vocab, bool multilingual,
+                                const char* head);
+  const char* head_;
+  bool multilingual_;
 };
 
 std::string remove_extra_spaces(const std::string& input);
@@ -228,5 +233,11 @@ class MmapFile {
   size_t size_ = 0;
 };
 
+template <class Int>
+std::string decode(const Vocab& vocab, const Int* begin, const Int* end,
+                   bool omit_special_tokens);
+
+std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
+                   bool omit_special_tokens);
+
 }  // namespace whisper
-#endif  // _WHISPER_H_

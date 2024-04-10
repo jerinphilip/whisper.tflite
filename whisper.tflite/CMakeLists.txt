@@ -3,6 +3,10 @@
 set(SOURCES TFLiteEngine.cpp whisper.cpp wav_util.cpp)
 set(EXT_LIBS
     tensorflow-lite
+    # The following is not pleasant, but gets to build. tensorflowlite_flex can
+    # only be built via bazel, then added the `.so` manually picked up and
+    # linked to the rest of the libs.
+    # TODO(@jerinphilip): Find a cleaner integration
     "/home/jerin/.cache/bazel/_bazel_jerin/a618ac3dc748926a1e43bc0dce8515ed/execroot/org_tensorflow/bazel-out/k8-opt/bin/tensorflow/lite/delegates/flex/libtensorflowlite_flex.so"
 )
 set(WHISPER_TFLITE_INCLUDE_DIRS

@@ -17,14 +17,12 @@ limitations under the License.
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "CLI11/CLI11.hpp"
 #define DR_WAV_IMPLEMENTATION
-#include "dr_libs/dr_wav.h"
 #include "whisper.tflite/wav_util.h"
 #include "whisper.tflite/whisper.h"
 
@@ -57,7 +55,8 @@ int run(const Options& options) {
 
   // Create a pointer to the start of the unsigned char array
   char* ptr = vocab_holder.get();
-  Reader reader(ptr);
+  bool multilingual = true;
+  Reader reader(ptr, multilingual);
   Vocab vocab;
   Filters filters;
   reader.read(filters, vocab);
@@ -84,13 +83,9 @@ int run(const Options& options) {
   auto encoder_out = encoder.forward(mel);
 
   Decoder decoder(options.decoder, vocab);
-  std::vector<int64_t> decoded = decoder.forward(encoder_out);
-  std::string surface;
-  fprintf(stderr, "ids: ");
-  for (auto& id : decoded) {
-    fprintf(stderr, "%zu ", id);
-    surface += vocab.id_to_token[id];
-  }
+  std::vector<int64_t> generated = decoder.forward(encoder_out);
+  bool omit_special_tokens = false;
+  std::string surface = decode(vocab, generated, omit_special_tokens);
   fprintf(stderr, "\n");
   fprintf(stderr, "surface: [%s]\n", surface.c_str());
 
