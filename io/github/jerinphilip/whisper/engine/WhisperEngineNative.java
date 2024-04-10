@@ -8,7 +8,7 @@ public class WhisperEngineNative implements IWhisperEngine {
   private IWhisperListener mUpdateListener = null;
 
   public WhisperEngineNative(
-      int engineType, String modelPath, String vocabPath, boolean multilingual) {
+      long engineType, String modelPath, String vocabPath, boolean multilingual) {
     nativePtr = create(engineType, modelPath, vocabPath, multilingual);
   }
 
@@ -41,7 +41,8 @@ public class WhisperEngineNative implements IWhisperEngine {
   }
 
   // Native methods
-  private native long create();
+  private native long create(
+      long engineType, String modelPath, String vocabPath, boolean multilingual);
 
   private native void destroy(long nativePtr);
 
