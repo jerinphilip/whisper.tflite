@@ -57,7 +57,8 @@ int run(const Options& options) {
 
   // Create a pointer to the start of the unsigned char array
   char* ptr = vocab_holder.get();
-  Reader reader(ptr);
+  bool multilingual = true;
+  Reader reader(ptr, multilingual);
   Vocab vocab;
   Filters filters;
   reader.read(filters, vocab);

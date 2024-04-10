@@ -191,13 +191,15 @@ int language_id(const std::string& code);
 // };
 struct Reader {
  public:
-  explicit Reader(char* head) : head_(head) {}
+  explicit Reader(char* head, bool multilingual)
+      : head_(head), multilingual_(multilingual) {}
   void read(Filters& filters, Vocab& vocab);
 
  private:
   static char* read_filters(Filters& filters, char* head);
-  static char* read_vocab(Vocab& vocab, char* head);
+  static char* read_vocab(Vocab& vocab, bool multilingual, char* head);
   char* head_;
+  bool multilingual_;
 };
 
 std::string remove_extra_spaces(const std::string& input);

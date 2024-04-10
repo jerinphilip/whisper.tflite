@@ -533,7 +533,7 @@ char* Reader::read_filters(Filters& filters, char* head) {
   return head;
 }
 
-char* Reader::read_vocab(Vocab& vocab, char* head) {
+char* Reader::read_vocab(Vocab& vocab, bool multilingual, char* head) {
   int32_t n_vocab = 0;
   memcpy(&n_vocab, head, sizeof(n_vocab));
   head += sizeof(n_vocab);
@@ -543,7 +543,9 @@ char* Reader::read_vocab(Vocab& vocab, char* head) {
   printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
 
   // TODO(@jerinphilip): Specialization, fix somehow.
-  transform_vocab_multilingual(vocab);
+  if (multilingual) {
+    transform_vocab_multilingual(vocab);
+  }
 
   // Assuming a maximum word length of 255 characters
   constexpr size_t kMaxBufferSize = 256;
@@ -564,7 +566,7 @@ char* Reader::read_vocab(Vocab& vocab, char* head) {
 
 void Reader::read(Filters& filters, Vocab& vocab) {
   head_ = read_filters(filters, head_);
-  head_ = read_vocab(vocab, head_);
+  head_ = read_vocab(vocab, multilingual_, head_);
 }
 
 std::string remove_extra_spaces(const std::string& input) {
