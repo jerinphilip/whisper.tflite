@@ -8,16 +8,29 @@ My requirements include working with a [German adapted `tiny`
 whisper](https://huggingface.co/aware-ai/whisper-tiny-german), so some changes
 towards that. This is currently exported via a [rube-goldberg
 machine](https://en.wikipedia.org/wiki/Rube_Goldberg_machine) of PyTorch ->
-ONNX -> TF -> TFLite. I'm exploring avenues to simplify.
+ONNX -> TF -> TFLite. I'm exploring avenues to simplify. 
 
 
-```bash
-git clone --recursive https://github.com/jerinphilip/whisper.tflite.git
+```bash git clone --recursive https://github.com/jerinphilip/whisper.tflite.git
 
-# Configure cmake, adjust parallel according to your system.
-cmake -B build -S .  
-cmake --build build --target all --parallel 28
+# Configure cmake, adjust parallel according to your system.  cmake -B build -S
+.  cmake --build build --target all --parallel 28 ```
+
+A plan is to run this locally on my android phone through the GPU or optimized
+CPU. Possible to take advantage of the following?
+
+```groovy
+...
+dependencies {
+    ...
+    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT'
+    implementation 'org.tensorflow:tensorflow-lite-gpu:0.0.0-nightly-SNAPSHOT'
+    implementation 'org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT'
+    ...
+}
 ```
+
+Maybe I can use this using [this](https://stackoverflow.com/a/55144057/4565794) resource?
 
 ### Resources
 
@@ -34,4 +47,4 @@ cmake --build build --target all --parallel 28
 * [TF Lite enable Flex delegate C++ API (with CMake of Bazel) #57822](https://github.com/tensorflow/tensorflow/issues/57822#issuecomment-1257127667)
 * [Adding Select Tf Ops to Cmake #55536](https://github.com/tensorflow/tensorflow/issues/55536#issuecomment-1286369922)
 * [How can I view weights in a .tflite file?](https://stackoverflow.com/a/52174193/4565794)
-
+* [Build TensorFlow Lite for Android](https://www.tensorflow.org/lite/android/lite_build)
