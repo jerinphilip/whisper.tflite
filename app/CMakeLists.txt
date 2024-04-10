@@ -1,8 +1,3 @@
-if(NOT ANDROID)
-  add_executable(my_audio_app main.cpp)
-  target_link_libraries(my_audio_app PUBLIC whisper-tflite)
-endif(NOT ANDROID)
-
 set(TENSORFLOW_SOURCE_DIR
     ""
     CACHE PATH "Directory that contains the TensorFlow project")

@@ -5,12 +5,11 @@ import io.github.jerinphilip.whisper.asr.IWhisperListener;
 public class WhisperEngineNative implements IWhisperEngine {
   private final String TAG = "WhisperEngineNative";
   private final long nativePtr; // Native pointer to the TFLiteEngine instance
-
-  private boolean mIsInitialized = false;
   private IWhisperListener mUpdateListener = null;
 
-  public WhisperEngineNative() {
-    nativePtr = createTFLiteEngine();
+  public WhisperEngineNative(
+      int engineType, String modelPath, String vocabPath, boolean multilingual) {
+    nativePtr = create(engineType, modelPath, vocabPath, multilingual);
   }
 
   @Override
@@ -19,42 +18,21 @@ public class WhisperEngineNative implements IWhisperEngine {
   }
 
   @Override
-  public boolean isInitialized() {
-    return mIsInitialized;
-  }
-
-  @Override
-  public boolean initialize(String modelPath, String vocabPath, boolean multilingual) {
-    int ret = loadModel(modelPath, vocabPath, multilingual);
-    // Log.d(TAG, "Model is loaded..." + modelPath);
-
-    mIsInitialized = true;
-    return true;
-  }
-
-  @Override
-  public String transcribeBuffer(float[] samples) {
+  public String transcribe(float[] samples) {
     return transcribeBuffer(nativePtr, samples);
   }
 
   @Override
-  public String transcribeFile(String waveFile) {
+  public String transcribe(String waveFile) {
     return transcribeFile(nativePtr, waveFile);
   }
-
-  @Override
-  public void interrupt() {}
 
   public void updateStatus(String message) {
     if (mUpdateListener != null) mUpdateListener.onUpdateReceived(message);
   }
 
-  private int loadModel(String modelPath, String vocabPath, boolean isMultilingual) {
-    return loadModel(nativePtr, modelPath, vocabPath, isMultilingual);
-  }
-
-  private void freeModel() {
-    freeModel(nativePtr);
+  private void destroy() {
+    destroy(nativePtr);
   }
 
   static {
@@ -63,12 +41,9 @@ public class WhisperEngineNative implements IWhisperEngine {
   }
 
   // Native methods
-  private native long createTFLiteEngine();
+  private native long create();
 
-  private native int loadModel(
-      long nativePtr, String modelPath, String vocabPath, boolean isMultilingual);
-
-  private native void freeModel(long nativePtr);
+  private native void destroy(long nativePtr);
 
   private native String transcribeBuffer(long nativePtr, float[] samples);
 

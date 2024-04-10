@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "mmap_file.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 
@@ -14,6 +15,11 @@
     fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__); \
     exit(1);                                                 \
   }
+
+#define TIME_DIFF_MS(start, end)                  \
+  (((((end).tv_sec - (start).tv_sec) * 1000000) + \
+    ((end).tv_usec - (start).tv_usec)) /          \
+   1000)
 
 namespace whisper {
 
@@ -150,6 +156,53 @@ struct Decoder {
   const whisper::Vocab& vocab_;
 };
 
+struct Engine {
+  virtual std::string transcribe(std::vector<float> samples) = 0;
+  virtual std::string transcribe(const char* waveFile) = 0;
+  virtual ~Engine() = default;
+};
+
+struct Monolith : public Engine {
+ public:
+  Monolith(const std::string& model_prefix, const std::string& vocab_path,
+           bool multilingual);
+  std::string transcribe(std::vector<float> samples) final;
+  std::string transcribe(const char* waveFile) final;
+
+ private:
+  Atom whisper_;
+  Vocab vocab_;
+  Filters filters_;
+  Mel mel_;
+
+  MmapFile vocab_file_;
+};
+
+struct EncDec : public Engine {
+ public:
+  EncDec(const std::string& model_prefix, const std::string& vocab_path,
+         bool multilingual);
+  std::string transcribe(std::vector<float> samples) final;
+  std::string transcribe(const char* waveFile) final;
+
+ private:
+  Encoder encoder_;
+  Decoder decoder_;
+
+  Vocab vocab_;
+  Filters filters_;
+  Mel mel_;
+
+  MmapFile vocab_file_;
+};
+
+enum class EngineType {
+  // clang-format off
+  Monolith = 0,  //
+  EncDec   = 1   //
+  // clang-format on
+};
+
 void inspect_tflite_tensor(const char* name, const TfLiteTensor& tensor);
 
 using LangKey = std::pair<std::string, std::string>;
@@ -196,32 +249,6 @@ struct Reader {
 
 std::string remove_extra_spaces(const std::string& input);
 
-class MmapFile {
- public:
-  MmapFile() = default;
-  explicit MmapFile(const std::string& filepath);
-  ~MmapFile();
-
-  void* data() const { return data_; }
-  size_t size() const { return size_; }
-
-  // Disable copy and assignment
-  MmapFile(const MmapFile&) = delete;
-  MmapFile& operator=(const MmapFile&) = delete;
-
-  MmapFile(MmapFile&& from) noexcept;
-
-  MmapFile& operator=(MmapFile&& from) noexcept;
-
- private:
-  void consume(MmapFile& from);
-  void reset();
-
-  int fd_ = -1;
-  void* data_ = nullptr;
-  size_t size_ = 0;
-};
-
 template <class Int>
 std::string decode(const Vocab& vocab, const Int* begin, const Int* end,
                    bool omit_special_tokens);
@@ -229,4 +256,6 @@ std::string decode(const Vocab& vocab, const Int* begin, const Int* end,
 std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
                    bool omit_special_tokens);
 
+Engine* create_engine(EngineType type, const char* model_prefix,
+                      const char* vocab_path, bool multilingual);
 }  // namespace whisper

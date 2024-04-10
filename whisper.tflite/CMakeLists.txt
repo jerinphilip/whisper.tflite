@@ -1,6 +1,6 @@
 # # Check if the build is Android
 
-set(SOURCES TFLiteEngine.cpp whisper.cpp wav_util.cpp)
+set(SOURCES whisper.cpp wav_util.cpp mmap_file.cpp)
 set(EXT_LIBS
     tensorflow-lite
     # The following is not pleasant, but gets to build. tensorflowlite_flex can

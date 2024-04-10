@@ -27,70 +27,19 @@ limitations under the License.
 #include "whisper.tflite/whisper.h"
 
 struct Options {
-  std::string encoder;
+  std::string model_prefix;
   std::string decoder;
   std::string vocab;
   std::string input;
 
   template <class App>
   void setup(App& app) {
-    app.add_option("--encoder", encoder, "Path encoder")->required();
-    app.add_option("--decoder", decoder, "Path to decoder")->required();
+    app.add_option("--model-prefix", model_prefix, "Model prefix")->required();
     app.add_option("--vocab", vocab, "Path to vocabulary")->required();
     app.add_option("--input", input, "Path to prefix other filenames to")
         ->required();
   }
 };
-
-int run(const Options& options) {
-  // NOLINTNEXTLINE
-  using namespace whisper;
-
-  uint64_t vocab_size;
-  FILE* vocab_fp = fopen(options.vocab.c_str(), "rb");
-  fread(&vocab_size, sizeof(uint64_t), 1, vocab_fp);
-  auto vocab_holder = std::make_unique<char[]>(vocab_size);
-  fread(vocab_holder.get(), vocab_size, 1, vocab_fp);
-  fclose(vocab_fp);
-
-  // Create a pointer to the start of the unsigned char array
-  char* ptr = vocab_holder.get();
-  bool multilingual = true;
-  Reader reader(ptr, multilingual);
-  Vocab vocab;
-  Filters filters;
-  reader.read(filters, vocab);
-
-  // Generate input_features for Audio file
-  const char* pcmfilename = options.input.c_str();
-  std::vector<float> pcmf32 = wav_read(pcmfilename);
-
-  // Hack if the audio file size is less than 30ms, append with 0's
-  pcmf32.resize((kSampleRate * kChunkSize), 0);
-
-  Mel mel;
-  if (!log_mel_spectrogram(pcmf32.data(), pcmf32.size(), kSampleRate, kNFFT,
-                           kHopLength, kNMEL, 1, filters, mel)) {
-    fprintf(stderr, "%s: failed to compute mel spectrogram\n", __func__);
-    return -1;
-  }
-
-  printf("Mel{ n_len: %d, n_mel = %d}\n", mel.n_len, mel.n_mel);
-
-  // Allocate tensor buffers.
-  //
-  Encoder encoder(options.encoder);
-  auto encoder_out = encoder.forward(mel);
-
-  Decoder decoder(options.decoder, vocab);
-  std::vector<int64_t> generated = decoder.forward(encoder_out);
-  bool omit_special_tokens = false;
-  std::string surface = decode(vocab, generated, omit_special_tokens);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "surface: [%s]\n", surface.c_str());
-
-  return 0;
-}
 
 int main(int argc, char* argv[]) {
   CLI::App app{"slimt"};
@@ -99,7 +48,11 @@ int main(int argc, char* argv[]) {
 
   try {
     app.parse(argc, argv);
-    return run(options);
+    using namespace whisper;  // NOLINT
+    bool multilingual = true;
+    EncDec encdec(options.model_prefix, options.vocab, multilingual);
+    std::string text = encdec.transcribe(options.input.c_str());
+    std::cout << text << "\n";
   } catch (const CLI::ParseError& e) {
     exit(app.exit(e));
   }

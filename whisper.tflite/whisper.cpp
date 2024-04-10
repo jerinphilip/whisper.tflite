@@ -1,11 +1,7 @@
 #include "whisper.h"
 
 #include <bits/types/struct_timeval.h>
-#include <fcntl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
 #include <sys/time.h>
-#include <unistd.h>
 
 #include <algorithm>
 #include <cassert>
@@ -17,7 +13,6 @@
 #include <cstring>
 #include <iostream>
 #include <iterator>
-#include <stdexcept>
 #include <string>
 #include <thread>
 #include <tuple>
@@ -28,6 +23,7 @@
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
+#include "wav_util.h"
 
 namespace whisper {
 
@@ -634,61 +630,6 @@ std::string remove_extra_spaces(const std::string& input) {
   return result;
 }
 
-MmapFile::MmapFile(const std::string& filepath) {
-  fd_ = open(filepath.c_str(), O_RDONLY);
-  if (fd_ == -1) {
-    throw std::runtime_error("Failed to open file: " + filepath);
-  }
-
-  struct stat st;
-  if (fstat(fd_, &st) == -1) {
-    close(fd_);
-    throw std::runtime_error("Failed to get file size: " + filepath);
-  }
-  size_ = st.st_size;
-
-  data_ = mmap(nullptr, size_, PROT_READ, MAP_PRIVATE, fd_, 0);
-  if (data_ == MAP_FAILED) {  // NOLINT
-    close(fd_);
-    throw std::runtime_error("Failed to mmap file: " + filepath);
-  }
-}
-
-MmapFile::~MmapFile() {
-  if (data_ != nullptr) {
-    munmap(data_, size_);
-  }
-  if (fd_ != -1) {
-    close(fd_);
-  }
-}
-
-MmapFile::MmapFile(MmapFile&& from) noexcept
-    : fd_(from.fd_), data_(from.data_), size_(from.size_) {
-  from.reset();
-}
-
-MmapFile& MmapFile::operator=(MmapFile&& from) noexcept {
-  if (this == &from) {
-    return *this;
-  }
-  consume(from);
-  return *this;
-}
-
-void MmapFile::consume(MmapFile& from) {
-  fd_ = (from.fd_);
-  data_ = (from.data_);
-  size_ = (from.size_);
-  from.reset();
-}
-
-void MmapFile::reset() {
-  fd_ = -1;
-  data_ = nullptr;
-  size_ = 0;
-}
-
 // Range templates
 template <class Int>
 std::string decode(const Vocab& vocab, const Int* begin, const Int* end,
@@ -721,6 +662,135 @@ std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
                    bool omit_special_tokens) {
   return decode(vocab, generated.data(), generated.data() + generated.size(),
                 omit_special_tokens);
+}
+
+Monolith::Monolith(const std::string& model_prefix,
+                   const std::string& vocab_path, bool multilingual)
+    : whisper_(model_prefix + ".tflite"), vocab_file_(vocab_path) {
+  /////////////// Load filters and vocab data ///////////////
+  FILE* vocab_fp = fopen(vocab_path.c_str(), "rb");
+  if (vocab_fp == nullptr) {
+    fprintf(stderr, "Unable to open vocabulary file: %s", vocab_path.c_str());
+  }
+
+  const char* ptr = static_cast<const char*>(vocab_file_.data());
+  int64_t vocab_size;
+  std::memcpy(&vocab_size, ptr, sizeof(uint64_t));
+
+  ptr = ptr + sizeof(uint64_t);
+  Reader reader(ptr, multilingual);
+  reader.read(filters_, vocab_);
+}
+
+std::string Monolith::transcribe(const char* waveFile) {
+  std::vector<float> pcmf32 = wav_read_legacy(waveFile);
+  pcmf32.resize((kSampleRate * kChunkSize), 0);
+  std::string text = transcribe(pcmf32);
+  return text;
+}
+
+std::string Monolith::transcribe(std::vector<float> samples) {
+  timeval start_time{};
+  timeval end_time{};
+  gettimeofday(&start_time, nullptr);
+
+  // Hack if the audio file size is less than 30ms append with 0's
+  samples.resize((kSampleRate * kChunkSize), 0);
+  const auto processor_count = std::thread::hardware_concurrency();
+
+  if (!log_mel_spectrogram(samples.data(), samples.size(), kSampleRate, kNFFT,
+                           kHopLength, kNMEL, processor_count, filters_,
+                           mel_)) {
+    std::cerr << "Failed to compute mel_ spectrogram" << '\n';
+    return "";
+  }
+
+  gettimeofday(&end_time, nullptr);
+  std::cout << "Time taken for Spectrogram: "
+            << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
+
+  auto* interpreter = whisper_.interpreter();
+  auto* input = interpreter->typed_input_tensor<float>(0);
+  memcpy(input, mel_.data.data(), mel_.n_mel * mel_.n_len * sizeof(float));
+  gettimeofday(&start_time, nullptr);
+
+  // Run inference
+  interpreter->SetNumThreads(processor_count);
+  if (interpreter->Invoke() != kTfLiteOk) {
+    return "";
+  }
+
+  gettimeofday(&end_time, nullptr);
+  std::cout << "Time taken for Interpreter: "
+            << TIME_DIFF_MS(start_time, end_time) << " ms" << '\n';
+
+  int output = interpreter->outputs()[0];
+  TfLiteTensor* output_tensor = interpreter->tensor(output);
+  TfLiteIntArray* output_dims = output_tensor->dims;
+  // assume output dims to be something like (1, 1, ... ,size)
+  auto output_size = output_dims->data[output_dims->size - 1];
+  int* output_int = interpreter->typed_output_tensor<int>(0);
+  bool omit_special_tokens = false;
+  std::string text =
+      decode(vocab_, output_int, output_int + output_size, omit_special_tokens);
+
+  return text;
+}
+
+EncDec::EncDec(const std::string& model_prefix, const std::string& vocab_path,
+               bool multilingual)
+    : vocab_file_(vocab_path),
+      encoder_(model_prefix + ".encoder.tflite"),
+      decoder_(model_prefix + ".decoder.tflite", vocab_) {
+  // Create a pointer to the start of the unsigned char array
+  const char* ptr =
+      reinterpret_cast<const char*>(vocab_file_.data()) + sizeof(int64_t);
+  Reader reader(ptr, multilingual);
+  Vocab vocab;
+  Filters filters;
+  reader.read(filters, vocab);
+}
+
+std::string EncDec::transcribe(std::vector<float> samples) {
+  samples.resize((kSampleRate * kChunkSize), 0);
+  const auto processor_count = std::thread::hardware_concurrency();
+
+  if (!log_mel_spectrogram(samples.data(), samples.size(), kSampleRate, kNFFT,
+                           kHopLength, kNMEL, processor_count, filters_,
+                           mel_)) {
+    std::cerr << "Failed to compute mel_ spectrogram" << '\n';
+    return "";
+  }
+
+  auto encoder_out = encoder_.forward(mel_);
+
+  std::vector<int64_t> generated = decoder_.forward(encoder_out);
+  bool omit_special_tokens = false;
+  std::string surface = decode(vocab_, generated, omit_special_tokens);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "surface: [%s]\n", surface.c_str());
+  return surface;
+}
+
+std::string EncDec::transcribe(const char* waveFile) {
+  std::vector<float> pcmf32 = wav_read_legacy(waveFile);
+  pcmf32.resize((kSampleRate * kChunkSize), 0);
+  std::string text = transcribe(pcmf32);
+  return text;
+}
+
+Engine* create_engine(EngineType type, const char* model_prefix,
+                      const char* vocab_path, bool multilingual) {
+  switch (type) {
+    case EngineType::Monolith:
+      return new Monolith(model_prefix, vocab_path, multilingual);
+    case EngineType::EncDec:
+      return new EncDec(model_prefix, vocab_path, multilingual);
+    default:
+      fprintf(stderr, "Unknown engine-type\n");
+      break;
+  }
+  return nullptr;
 }
 
 }  // namespace whisper
