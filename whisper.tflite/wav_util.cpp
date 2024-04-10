@@ -12,7 +12,9 @@
 #define DR_WAV_IMPLEMENTATION
 #include "dr_libs/dr_wav.h"
 
-std::vector<float> readWAVFile(const char* filename) {
+namespace whisper {
+
+std::vector<float> wav_read_legacy(const char* filename) {
   // Open the WAV file for binary reading
   std::ifstream wav_file(filename, std::ios::binary);
 
@@ -114,13 +116,14 @@ std::vector<float> wav_read(const char* filename) {
   int n = wav.totalPCMFrameCount;
   if (wav.channels == 1) {
     for (int i = 0; i < n; i++) {
-      pcmf32[i] = static_cast<float>(pcm16[i]) / 32768.0F;
+      pcmf32[i] = static_cast<float>(pcm16[i]) / static_cast<float>(INT16_MAX);
     }
   } else {
     for (int i = 0; i < n; i++) {
-      pcmf32[i] =
-          static_cast<float>(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0F;
+      pcmf32[i] = static_cast<float>(pcm16[2 * i] + pcm16[2 * i + 1]) /
+                  static_cast<float>(INT32_MAX);
     }
   }
   return pcmf32;
 }
+}  // namespace whisper

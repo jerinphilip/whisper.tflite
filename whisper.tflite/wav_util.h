@@ -1,6 +1,7 @@
 #include <cstdint>
 #include <vector>
 
+namespace whisper {
 #pragma pack(push, 1)  // Ensure that struct members are packed tightly
 
 // Define the WAV file header structure
@@ -20,5 +21,6 @@ struct WAVHeader {
 
 #pragma pack(pop)  // Restore default struct packing
 
-std::vector<float> readWAVFile(const char* filename);
+std::vector<float> wav_read_legacy(const char* filename);
 std::vector<float> wav_read(const char* filename);
+}  // namespace whisper

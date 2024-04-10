@@ -227,7 +227,7 @@ std::string TFLiteEngine::transcribe(std::vector<float> samples) {
 }
 
 std::string TFLiteEngine::transcribe(const char *waveFile) {
-  std::vector<float> pcmf32 = readWAVFile(waveFile);
+  std::vector<float> pcmf32 = wav_read_legacy(waveFile);
   pcmf32.resize((kSampleRate * kChunkSize), 0);
   std::string text = transcribe(pcmf32);
   return text;
