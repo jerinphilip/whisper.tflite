@@ -1,9 +1,9 @@
-package com.whispertflite.engine;
+package io.github.jerinphilip.whisper.engine;
 
 import android.util.Log;
-import com.whispertflite.asr.IWhisperListener;
-import com.whispertflite.utils.WaveUtil;
-import com.whispertflite.utils.WhisperUtil;
+import io.github.jerinphilip.whisper.asr.IWhisperListener;
+import io.github.jerinphilip.whisper.utils.WaveUtil;
+import io.github.jerinphilip.whisper.utils.WhisperUtil;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;

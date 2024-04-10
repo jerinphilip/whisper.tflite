@@ -1,4 +1,4 @@
-package com.whispertflite.asr;
+package io.github.jerinphilip.whisper.asr;
 
 public interface IWhisperListener {
   void onUpdateReceived(String message);

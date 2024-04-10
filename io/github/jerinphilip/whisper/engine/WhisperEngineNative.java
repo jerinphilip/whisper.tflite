@@ -1,7 +1,7 @@
-package com.whispertflite.engine;
+package io.github.jerinphilip.whisper.engine;
 
 import android.util.Log;
-import com.whispertflite.asr.IWhisperListener;
+import io.github.jerinphilip.whisper.asr.IWhisperListener;
 
 public class WhisperEngineNative implements IWhisperEngine {
   private final String TAG = "WhisperEngineNative";

@@ -1,4 +1,4 @@
-package com.whispertflite.utils;
+package io.github.jerinphilip.whisper.utils;
 
 import static java.lang.Math.cos;
 import static java.lang.Math.log10;

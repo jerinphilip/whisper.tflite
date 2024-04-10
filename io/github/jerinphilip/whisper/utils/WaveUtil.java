@@ -1,4 +1,4 @@
-package com.whispertflite.utils;
+package io.github.jerinphilip.whisper.utils;
 
 import android.util.Log;
 import java.io.FileInputStream;

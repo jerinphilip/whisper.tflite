@@ -1,4 +1,4 @@
-package com.whispertflite.asr;
+package io.github.jerinphilip.whisper.asr;
 
 import android.Manifest;
 import android.content.Context;
@@ -8,7 +8,7 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.util.Log;
 import androidx.core.app.ActivityCompat;
-import com.whispertflite.utils.WaveUtil;
+import io.github.jerinphilip.whisper.utils.WaveUtil;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicBoolean;

@@ -1,9 +1,9 @@
-package com.whispertflite.asr;
+package io.github.jerinphilip.whisper.asr;
 
 import android.content.Context;
 import android.util.Log;
-import com.whispertflite.engine.IWhisperEngine;
-import com.whispertflite.engine.WhisperEngineNative;
+import io.github.jerinphilip.whisper.engine.IWhisperEngine;
+import io.github.jerinphilip.whisper.engine.WhisperEngineNative;
 import java.io.File;
 import java.io.IOException;
 import java.util.LinkedList;
