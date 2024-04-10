@@ -3,3 +3,12 @@ build/
 
 env
 export/workspace
+
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+
+# Java Class files
+*.class
