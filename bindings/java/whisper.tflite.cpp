@@ -23,10 +23,10 @@ JNIEXPORT jlong WTJ_JNI_EXPORT(WhisperEngineNative,
 
 // JNI method to load the model
 JNIEXPORT jint WTJ_JNI_EXPORT(WhisperEngineNative,
-                              create)(JNIEnv *env, jobject /*thiz*/,
-                                      jlong nativePtr, jstring modelPath,
-                                      jstring vocabPath,
-                                      jboolean isMultilingual) {
+                              loadModel)(JNIEnv *env, jobject /*thiz*/,
+                                         jlong nativePtr, jstring modelPath,
+                                         jstring vocabPath,
+                                         jboolean isMultilingual) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_model_path = env->GetStringUTFChars(modelPath, nullptr);
@@ -37,9 +37,9 @@ JNIEXPORT jint WTJ_JNI_EXPORT(WhisperEngineNative,
 }
 
 // JNI method to free the model
-JNIEXPORT void WTJ_JNI_EXPORT(WhisperEngineNative, destroy)(JNIEnv * /*env*/,
-                                                            jobject /*thiz*/,
-                                                            jlong nativePtr) {
+JNIEXPORT void WTJ_JNI_EXPORT(WhisperEngineNative, freeModel)(JNIEnv * /*env*/,
+                                                              jobject /*thiz*/,
+                                                              jlong nativePtr) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   engine->destroy();
@@ -47,10 +47,8 @@ JNIEXPORT void WTJ_JNI_EXPORT(WhisperEngineNative, destroy)(JNIEnv * /*env*/,
 }
 
 // JNI method to transcribe audio buffer
-JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative,
-                                 transcribe)(JNIEnv *env, jobject /*thiz*/,
-                                             jlong nativePtr,
-                                             jfloatArray samples) {
+JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative, transcribeBuffer)(
+    JNIEnv *env, jobject /*thiz*/, jlong nativePtr, jfloatArray samples) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
 
