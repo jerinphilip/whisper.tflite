@@ -10,6 +10,12 @@
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/kernels/register.h"
 
+#define TFLITE_MINIMAL_CHECK(x)                              \
+  if (!(x)) {                                                \
+    fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__); \
+    exit(1);                                                 \
+  }
+
 namespace whisper {
 
 // Constants
@@ -120,6 +126,54 @@ bool log_mel_spectrogram(const float* samples, int n_samples, int sample_rate,
                          Filters& filters, Mel& mel);
 
 void transform_vocab_multilingual(Vocab& vocab);
+const char* tf_type_to_name(TfLiteType type);
+
+struct Atom {
+ public:
+  explicit Atom(const std::string& path);
+  tflite::Interpreter* interpreter() { return interpreter_.get(); }
+
+ private:
+  std::unique_ptr<tflite::FlatBufferModel> model_;
+  tflite::ops::builtin::BuiltinOpResolver resolver_;
+  tflite::InterpreterBuilder builder_;
+  std::unique_ptr<tflite::Interpreter> interpreter_;
+};
+
+struct Encoder {
+ public:
+  explicit Encoder(const std::string& path);
+  std::tuple<TfLiteTensor*, float*> forward(const whisper::Mel& mel);
+
+ private:
+  Atom atom_;
+};
+
+struct Decoder {
+ public:
+  explicit Decoder(const std::string& path, const whisper::Vocab& vocab);
+  std::vector<int64_t> forward(std::tuple<TfLiteTensor*, float*> encoder_out);
+
+ private:
+  Atom atom_;
+  const whisper::Vocab& vocab_;
+};
+
+void inspect_tflite_tensor(const char* name, const TfLiteTensor& tensor);
+
+// https://github.com/openai/whisper/blob/ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab/whisper/tokenizer.py#L10
+int language_id(const std::string& code);
+
+struct Reader {
+ public:
+  explicit Reader(char* head) : head_(head) {}
+  void read(Filters& filters, Vocab& vocab);
+
+ private:
+  static char* read_filters(Filters& filters, char* head);
+  static char* read_vocab(Vocab& vocab, char* head);
+  char* head_;
+};
 
 }  // namespace whisper
 #endif  // _WHISPER_H_

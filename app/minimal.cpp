@@ -23,19 +23,12 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#define DR_WAV_IMPLEMENTATION
-#include "dr_libs/dr_wav.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
 #include "tensorflow/lite/kernels/register.h"
+#include "whisper.tflite/wav_util.h"
 #include "whisper.tflite/whisper.h"
-
-#define TFLITE_MINIMAL_CHECK(x)                              \
-  if (!(x)) {                                                \
-    fprintf(stderr, "Error at %s:%d\n", __FILE__, __LINE__); \
-    exit(1);                                                 \
-  }
 
 std::string remove_extra_spaces(const std::string& input) {
   std::string result;
@@ -134,54 +127,9 @@ int main(int argc, char* argv[]) {
   // Generate input_features for Audio file
   const char* pcmfilename = argv[3];
   // WAV input
-  std::vector<float> pcmf32;
-  {
-    drwav wav;
-    if (!drwav_init_file(&wav, pcmfilename, nullptr)) {
-      fprintf(stderr, "%s: failed to open WAV file '%s' - check your input\n",
-              argv[0], pcmfilename);
-      return 3;
-    }
-
-    if (wav.channels != 1 && wav.channels != 2) {
-      fprintf(stderr, "%s: WAV file '%s' must be mono or stereo\n", argv[0],
-              pcmfilename);
-      return 4;
-    }
-
-    if (wav.sampleRate !=
-        kSampleRate) {  // Update to use the correct sample rate
-      fprintf(stderr, "%s: WAV file '%s' must be 16 kHz\n", argv[0],
-              pcmfilename);
-      return 5;
-    }
-
-    if (wav.bitsPerSample != 16) {
-      fprintf(stderr, "%s: WAV file '%s' must be 16-bit\n", argv[0],
-              pcmfilename);
-      return 6;
-    }
-
-    std::vector<int16_t> pcm16;
-    pcm16.resize(wav.totalPCMFrameCount * wav.channels);
-    drwav_read_pcm_frames_s16(&wav, wav.totalPCMFrameCount, pcm16.data());
-    drwav_uninit(&wav);
-    // convert to mono, float
-    pcmf32.resize(wav.totalPCMFrameCount);
-    int n = wav.totalPCMFrameCount;
-    if (wav.channels == 1) {
-      for (int i = 0; i < n; i++) {
-        pcmf32[i] = static_cast<float>(pcm16[i]) / 32768.0F;
-      }
-    } else {
-      for (int i = 0; i < n; i++) {
-        pcmf32[i] =
-            static_cast<float>(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0F;
-      }
-    }
-  }
 
   // Hack if the audio file size is less than 30ms, append with 0's
+  std::vector<float> pcmf32 = wav_read(pcmfilename);
   pcmf32.resize((kSampleRate * kChunkSize), 0);
   if (!log_mel_spectrogram(pcmf32.data(), pcmf32.size(), kSampleRate, kNFFT,
                            kHopLength, kNMEL, 1, filters, mel)) {

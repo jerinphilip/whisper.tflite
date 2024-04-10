@@ -9,6 +9,9 @@
 #include <string>
 #include <vector>
 
+#define DR_WAV_IMPLEMENTATION
+#include "dr_libs/dr_wav.h"
+
 std::vector<float> readWAVFile(const char* filename) {
   // Open the WAV file for binary reading
   std::ifstream wav_file(filename, std::ios::binary);
@@ -78,4 +81,46 @@ std::vector<float> readWAVFile(const char* filename) {
 
   // Return the float_samples vector
   return float_samples;
+}
+
+std::vector<float> wav_read(const char* filename) {
+  std::vector<float> pcmf32;
+  drwav wav;
+  if (!drwav_init_file(&wav, filename, nullptr)) {
+    fprintf(stderr, "failed to open WAV file '%s' - check your input\n",
+            filename);
+  }
+
+  if (wav.channels != 1 && wav.channels != 2) {
+    fprintf(stderr, "WAV file '%s' must be mono or stereo\n", filename);
+  }
+
+  constexpr int kSampleRate = 16000;
+  if (wav.sampleRate != kSampleRate) {  // Update to use the correct sample rate
+    fprintf(stderr, "WAV file '%s' must be 16 kHz\n", filename);
+  }
+
+  constexpr int kExpectedBitsPerSample = 16;
+  if (wav.bitsPerSample != kExpectedBitsPerSample) {
+    fprintf(stderr, "WAV file '%s' must be 16-bit\n", filename);
+  }
+
+  std::vector<int16_t> pcm16;
+  pcm16.resize(wav.totalPCMFrameCount * wav.channels);
+  drwav_read_pcm_frames_s16(&wav, wav.totalPCMFrameCount, pcm16.data());
+  drwav_uninit(&wav);
+  // convert to mono, float
+  pcmf32.resize(wav.totalPCMFrameCount);
+  int n = wav.totalPCMFrameCount;
+  if (wav.channels == 1) {
+    for (int i = 0; i < n; i++) {
+      pcmf32[i] = static_cast<float>(pcm16[i]) / 32768.0F;
+    }
+  } else {
+    for (int i = 0; i < n; i++) {
+      pcmf32[i] =
+          static_cast<float>(pcm16[2 * i] + pcm16[2 * i + 1]) / 65536.0F;
+    }
+  }
+  return pcmf32;
 }

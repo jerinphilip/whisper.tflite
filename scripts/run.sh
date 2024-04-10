@@ -8,8 +8,8 @@
 WAV=$1
 set -x
 ./build/app/encdec \
-  --encoder ../hf.whisper/workspace/aware-ai-whisper-tiny-german.encoder.tflite \
-  --decoder ../hf.whisper/workspace/aware-ai-whisper-tiny-german.decoder.tflite \
+  --encoder "export/workspace/aware-ai-whisper-tiny-german.encoder.tflite" \
+  --decoder "export/workspace/aware-ai-whisper-tiny-german.decoder.tflite" \
   --vocab data/openai.whisper.tiny/filters_vocab_multilingual.bin \
   --input samples/de/de_$WAV.wav
 # --input samples/de/de_9.wav

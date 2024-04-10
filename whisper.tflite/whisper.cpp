@@ -1,10 +1,16 @@
 #include "whisper.h"
 
+#include <bits/types/struct_timeval.h>
+#include <sys/time.h>
+
 #include <cmath>
 #include <iostream>
 #include <thread>
 #include <vector>
 
+#include "tensorflow/lite/core/interpreter.h"
+#include "tensorflow/lite/core/interpreter_builder.h"
+#include "tensorflow/lite/core/model_builder.h"
 namespace whisper {
 
 // Print a vector of float values
@@ -173,6 +179,7 @@ bool log_mel_spectrogram(const float* samples, int n_samples,
     worker.join();
   }
 
+  // https://github.com/openai/whisper/blob/ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab/whisper/audio.py#L154
   // clamping and normalization
   double mmax = -1e20;
   for (int i = 0; i < mel.n_mel * mel.n_len; i++) {
@@ -202,6 +209,355 @@ void transform_vocab_multilingual(Vocab& vocab) {
   vocab.token_solm++;
   vocab.token_not++;
   vocab.token_beg++;
+}
+
+// core/c/c_api_types.h
+// https://github.com/tensorflow/tensorflow/blob/b0731769d7c0e1d339fcfce30f46d9a73a6f91f1/tensorflow/lite/core/c/c_api_types.h#L116
+/// Types supported by tensor
+const char* tf_type_to_name(TfLiteType type) {
+  // NOLINTBEGIN
+  // clang-format off
+	switch(type){
+		case kTfLiteNoType     : return "kTfLiteNoType     ";
+		case kTfLiteFloat32    : return "kTfLiteFloat32    ";
+		case kTfLiteInt32      : return "kTfLiteInt32      ";
+		case kTfLiteUInt8      : return "kTfLiteUInt8      ";
+		case kTfLiteInt64      : return "kTfLiteInt64      ";
+		case kTfLiteString     : return "kTfLiteString     ";
+		case kTfLiteBool       : return "kTfLiteBool       ";
+		case kTfLiteInt16      : return "kTfLiteInt16      ";
+		case kTfLiteComplex64  : return "kTfLiteComplex64  ";
+		case kTfLiteInt8       : return "kTfLiteInt8       ";
+		case kTfLiteFloat16    : return "kTfLiteFloat16    ";
+		case kTfLiteFloat64    : return "kTfLiteFloat64    ";
+		case kTfLiteComplex128 : return "kTfLiteComplex128 ";
+		case kTfLiteUInt64     : return "kTfLiteUInt64     ";
+		case kTfLiteResource   : return "kTfLiteResource   ";
+		case kTfLiteVariant    : return "kTfLiteVariant    ";
+		case kTfLiteUInt32     : return "kTfLiteUInt32     ";
+		case kTfLiteUInt16     : return "kTfLiteUInt16     ";
+		case kTfLiteInt4       : return "kTfLiteInt4       ";
+		case kTfLiteBFloat16   : return "kTfLiteBFloat16   ";
+	}
+  // clang-format on
+  // NOLINTEND
+  return "kUnknown          ";
+}
+
+Atom::Atom(const std::string& path)
+    : model_(tflite::FlatBufferModel::BuildFromFile(path.c_str())),
+      builder_(*model_, resolver_) {
+  // Build the interpreter with the InterpreterBuilder.
+  // Note: all Interpreters should be built with the InterpreterBuilder,
+  // which allocates memory for the Interpreter and does various set up
+  // tasks so that the Interpreter can read the provided model.
+  builder_(&interpreter_);
+  TFLITE_MINIMAL_CHECK(interpreter_ != nullptr);
+  TFLITE_MINIMAL_CHECK(interpreter_->AllocateTensors() == kTfLiteOk);
+}
+
+void inspect_tflite_tensor(const char* name, const TfLiteTensor& tensor) {
+  if (std::getenv("DEBUG")) {
+    const TfLiteIntArray* dims = tensor.dims;
+    fprintf(stderr, "[user::%s] [%s: ", name, tf_type_to_name(tensor.type));
+    for (size_t i = 0; i < dims->size; i++) {
+      fprintf(stderr, "%s%d", i ? "x" : "", dims->data[i]);
+    }
+    fprintf(stderr, "] size: %zu [tf::%s]\n", tensor.bytes, tensor.name);
+  }
+}
+
+Encoder::Encoder(const std::string& path) : atom_(path) {}
+std::tuple<TfLiteTensor*, float*> Encoder::forward(const whisper::Mel& mel) {
+  struct timeval start_time;
+  struct timeval end_time;
+  // Get information about the memory area to use for the model's input.
+  auto* interpreter = atom_.interpreter();
+  auto* input = interpreter->typed_input_tensor<float>(0);
+  // Use the processed audio data as input
+  // Update to use the correct struct members
+  memcpy(input, mel.data.data(), mel.n_mel * mel.n_len * sizeof(float));
+  gettimeofday(&start_time, nullptr);
+  TFLITE_MINIMAL_CHECK(interpreter->Invoke() == kTfLiteOk);
+  gettimeofday(&end_time, nullptr);
+  // Run inference
+  printf("Inference time %ld seconds \n",
+         (end_time.tv_sec - start_time.tv_sec));
+  int output = interpreter->outputs()[0];
+
+  inspect_tflite_tensor("encoder_in[0]", *(interpreter->input_tensor(0)));
+  inspect_tflite_tensor("encoder_out[0]", *(interpreter->output_tensor(0)));
+  printf("output: %d\n", output);
+  return {
+      interpreter->output_tensor(0),             //
+      interpreter->typed_input_tensor<float>(0)  //
+  };
+}
+
+Decoder::Decoder(const std::string& path, const whisper::Vocab& vocab)
+    : atom_(path), vocab_(vocab) {}
+
+std::vector<int64_t> Decoder::forward(
+    std::tuple<TfLiteTensor*, float*> encoder_out) {
+  (void)encoder_out;
+  auto* interpreter = atom_.interpreter();
+  TfLiteTensor* input = interpreter->input_tensor(0);
+  inspect_tflite_tensor("decoder_in[0]", *input);
+
+  auto* data = interpreter->typed_input_tensor<float>(0);
+  auto [encoder_tensor, encoder_data] = encoder_out;
+  memcpy(data, encoder_data, encoder_tensor->bytes);
+
+  // 50259 + idx, because multilingual is shifted.
+  // Why is multiligual shifted?
+  const int64_t target_lang_id = 50259 + language_id("de");
+
+  std::cout << "de " << target_lang_id << "\n";
+
+  // [50258, 50261, 50359, 50363]
+  // [[50261 50359 50363  6142]]
+  // NOLINTBEGIN
+  std::vector<int64_t> prompt = {
+      vocab_.token_sot,         // start of token
+      target_lang_id,           // target-lang
+      vocab_.token_transcribe,  // transcribe
+      vocab_.token_not,         // no-timestamps
+  };
+  // NOLINTEND
+
+  auto decoder_ids = [&interpreter]() { return interpreter->input_tensor(1); };
+
+  inspect_tflite_tensor("decoder_in[1]", *decoder_ids());
+
+  auto argmax = [](const float* begin, const float* end) {
+    const float* p = begin;
+    float max_value = *p;
+    int64_t max_index = std::distance(begin, p);
+    ++p;
+    while (p < end) {
+      int64_t index = std::distance(begin, p);
+      if (*p >= max_value) {
+        max_value = *p;
+        max_index = index;
+      }
+      ++p;
+    }
+
+    return std::make_pair(max_index, max_value);
+  };
+
+  int64_t eos_id = vocab_.token_eot;         // NOLINT
+  constexpr size_t max_decoder_tokens = 30;  // NOLINT
+  size_t vocab_size = vocab_.n_vocab;        // NOLINT
+  int64_t num_prime_tokens = prompt.size();
+  for (size_t i = prompt.size() - 1; i < max_decoder_tokens; i++) {
+    interpreter->ResizeInputTensor(1, {1, static_cast<int>(prompt.size())});
+    interpreter->AllocateTensors();
+    inspect_tflite_tensor("decoder_in[1]", *decoder_ids());
+
+    auto* prompt_data = interpreter->typed_input_tensor<int64_t>(1);
+    std::memcpy(prompt_data, prompt.data(), sizeof(int64_t) * prompt.size());
+
+    interpreter->Invoke();
+    TfLiteTensor* output0 = interpreter->output_tensor(0);
+    inspect_tflite_tensor("decoder_out[0]", *output0);
+
+    auto* out = interpreter->typed_output_tensor<float>(0);
+
+    std::vector<int64_t> decoded;
+    // int64_t suppress = (i + 1 == num_prime_tokens) ? eos_id : -1;
+    int64_t suppress = eos_id;
+    for (size_t offset = 0; offset <= i; offset++) {
+      float* begin = out + offset * vocab_size;
+      auto m = argmax(begin, begin + vocab_size);
+      if (std::getenv("DEBUG")) {
+        fprintf(stderr, "decode[%zu]@%zu = %zu, %f\n", offset, i, m.first,
+                m.second);
+      }
+      // Last element get added.
+      if (offset == i) {
+        prompt.push_back(m.first);
+      }
+    }
+
+    if (prompt.back() == eos_id) {
+      break;
+    }
+  }
+
+  return prompt;
+}
+
+int language_id(const std::string& code) {
+  using Key = std::pair<std::string, std::string>;
+  const static std::vector<Key> kMetadata = {
+      // clang-format off
+      { "en", "english"},
+      { "zh", "chinese"},
+      { "de", "german"},
+      { "es", "spanish"},
+      { "ru", "russian"},
+      { "ko", "korean"},
+      { "fr", "french"},
+      { "ja", "japanese"},
+      { "pt", "portuguese"},
+      { "tr", "turkish"},
+      { "pl", "polish"},
+      { "ca", "catalan"},
+      { "nl", "dutch"},
+      { "ar", "arabic"},
+      { "sv", "swedish"},
+      { "it", "italian"},
+      { "id", "indonesian"},
+      { "hi", "hindi"},
+      { "fi", "finnish"},
+      { "vi", "vietnamese"},
+      { "he", "hebrew"},
+      { "uk", "ukrainian"},
+      { "el", "greek"},
+      { "ms", "malay"},
+      { "cs", "czech"},
+      { "ro", "romanian"},
+      { "da", "danish"},
+      { "hu", "hungarian"},
+      { "ta", "tamil"},
+      { "no", "norwegian"},
+      { "th", "thai"},
+      { "ur", "urdu"},
+      { "hr", "croatian"},
+      { "bg", "bulgarian"},
+      { "lt", "lithuanian"},
+      { "la", "latin"},
+      { "mi", "maori"},
+      { "ml", "malayalam"},
+      { "cy", "welsh"},
+      { "sk", "slovak"},
+      { "te", "telugu"},
+      { "fa", "persian"},
+      { "lv", "latvian"},
+      { "bn", "bengali"},
+      { "sr", "serbian"},
+      { "az", "azerbaijani"},
+      { "sl", "slovenian"},
+      { "kn", "kannada"},
+      { "et", "estonian"},
+      { "mk", "macedonian"},
+      { "br", "breton"},
+      { "eu", "basque"},
+      { "is", "icelandic"},
+      { "hy", "armenian"},
+      { "ne", "nepali"},
+      { "mn", "mongolian"},
+      { "bs", "bosnian"},
+      { "kk", "kazakh"},
+      { "sq", "albanian"},
+      { "sw", "swahili"},
+      { "gl", "galician"},
+      { "mr", "marathi"},
+      { "pa", "punjabi"},
+      { "si", "sinhala"},
+      { "km", "khmer"},
+      { "sn", "shona"},
+      { "yo", "yoruba"},
+      { "so", "somali"},
+      { "af", "afrikaans"},
+      { "oc", "occitan"},
+      { "ka", "georgian"},
+      { "be", "belarusian"},
+      { "tg", "tajik"},
+      { "sd", "sindhi"},
+      { "gu", "gujarati"},
+      { "am", "amharic"},
+      { "yi", "yiddish"},
+      { "lo", "lao"},
+      { "uz", "uzbek"},
+      { "fo", "faroese"},
+      { "ht", "haitian creole"},
+      { "ps", "pashto"},
+      { "tk", "turkmen"},
+      { "nn", "nynorsk"},
+      { "mt", "maltese"},
+      { "sa", "sanskrit"},
+      { "lb", "luxembourgish"},
+      { "my", "myanmar"},
+      { "bo", "tibetan"},
+      { "tl", "tagalog"},
+      { "mg", "malagasy"},
+      { "as", "assamese"},
+      { "tt", "tatar"},
+      { "haw", "hawaiian"},
+      { "ln", "lingala"},
+      { "ha", "hausa"},
+      { "ba", "bashkir"},
+      { "jw", "javanese"},
+      { "su", "sundanese"},
+      { "yue", "cantonese"},
+      // clang-format on
+  };
+
+  auto predicate = [&code](const Key& key) { return key.first == code; };
+  auto needle = std::find_if(kMetadata.begin(), kMetadata.end(), predicate);
+  return std::distance(kMetadata.begin(), needle);
+}
+
+char* Reader::read_filters(Filters& filters, char* head) {
+  // Read the magic number
+  uint32_t magic = 0;
+  memcpy(&magic, head, sizeof(magic));
+  // tflt
+  // constexpr uint32_t kTFLTExpectedMagic = 0x74666C74;
+  // if (magic != kTFLTExpectedMagic) {
+  //   printf("Invalid vocab file (bad magic)\n");
+  //   return 0;
+  // }
+  head += sizeof(magic);  // Move the pointer to the next position
+
+  // Filters filters;  // Use the correct struct from whisper.h
+  // Load mel filters
+  memcpy(&filters.n_mel, head, sizeof(filters.n_mel));
+  head += sizeof(filters.n_mel);
+
+  memcpy(&filters.n_fft, head, sizeof(filters.n_fft));
+  head += sizeof(filters.n_fft);
+
+  // Allocate memory for the vector and copy data
+  filters.data.resize(filters.n_mel * filters.n_fft);
+  memcpy(filters.data.data(), head,
+         filters.n_mel * filters.n_fft * sizeof(float));
+  head += filters.n_mel * filters.n_fft * sizeof(float);
+  return head;
+}
+
+char* Reader::read_vocab(Vocab& vocab, char* head) {
+  int32_t n_vocab = 0;
+  memcpy(&n_vocab, head, sizeof(n_vocab));
+  head += sizeof(n_vocab);
+
+  // Update the vocabulary size based on whisper.h
+  vocab.n_vocab = n_vocab;
+  printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
+  transform_vocab_multilingual(vocab);
+
+  // Assuming a maximum word length of 255 characters
+  constexpr size_t kMaxBufferSize = 256;
+  char word[kMaxBufferSize];
+  for (int i = 0; i < n_vocab; i++) {
+    uint32_t len;
+    memcpy(&len, head, sizeof(len));
+    head += sizeof(len);
+
+    memcpy(word, head, len);
+    word[len] = '\0';  // Null-terminate the string
+    head += len;
+
+    vocab.id_to_token[i] = std::string(word);
+  }
+  return head;
+}
+
+void Reader::read(Filters& filters, Vocab& vocab) {
+  head_ = read_filters(filters, head_);
+  head_ = read_vocab(vocab, head_);
 }
 
 }  // namespace whisper

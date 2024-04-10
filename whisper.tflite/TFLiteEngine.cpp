@@ -22,11 +22,6 @@
   (((((end).tv_sec - (start).tv_sec) * 1000000) + \
     ((end).tv_usec - (start).tv_usec)) /          \
    1000)
-#define TFLITE_MINIMAL_CHECK(x)                            \
-  if (!(x)) {                                              \
-    fprintf(stderr, "Error at %s:%d", __FILE__, __LINE__); \
-    exit(1);                                               \
-  }
 
 namespace whisper {
 int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
