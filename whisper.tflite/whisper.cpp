@@ -676,17 +676,38 @@ void MmapFile::reset() {
   size_ = 0;
 }
 
-std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
+// Range templates
+template <class Int>
+std::string decode(const Vocab& vocab, const Int* begin, const Int* end,
                    bool omit_special_tokens /*=false*/) {
   std::string surface;
-  for (const auto& id : generated) {
+  for (const Int* p = begin; p != end; p++) {
+    int id = *p;
     if (!omit_special_tokens || id < vocab.token_eot) {
       auto query = vocab.id_to_token.find(id);
       assert(query != vocab.id_to_token.end());
       surface += query->second;
     }
+
+    if (id == vocab.token_eot) {
+      break;
+    }
   }
   return surface;
+}
+
+// Template specializations
+template std::string decode(const Vocab& vocab, const int* begin,
+                            const int* end, bool omit_special_tokens);
+
+template std::string decode(const Vocab& vocab, const int64_t* begin,
+                            const int64_t* end, bool omit_special_tokens);
+
+// Convenience on vector, relays into range based functions.
+std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
+                   bool omit_special_tokens) {
+  return decode(vocab, generated.data(), generated.data() + generated.size(),
+                omit_special_tokens);
 }
 
 }  // namespace whisper

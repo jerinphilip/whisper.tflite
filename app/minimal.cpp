@@ -113,20 +113,9 @@ int main(int argc, char* argv[]) {
   TfLiteIntArray* output_dims = output_tensor->dims;
   auto output_size = output_dims->data[output_dims->size - 1];
   int* output_int = interpreter->typed_output_tensor<int>(0);
-  std::string text;
-  auto decode = [&vocab](int token) {
-    // Empty
-    return vocab.id_to_token.at(token).c_str();
-  };
-
-  for (int i = 0; i < output_size; i++) {
-    if (output_int[i] == vocab.token_eot) {
-      break;
-    }
-    if (output_int[i] < vocab.token_eot) {
-      text += decode(output_int[i]);
-    }
-  }
+  bool omit_special_tokens = true;
+  std::string text =
+      decode(vocab, output_int, output_int + output_size, omit_special_tokens);
 
   // Remove extra spaces between words
   text = remove_extra_spaces(text);

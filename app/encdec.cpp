@@ -86,7 +86,8 @@ int run(const Options& options) {
 
   Decoder decoder(options.decoder, vocab);
   std::vector<int64_t> generated = decoder.forward(encoder_out);
-  std::string surface = decode(vocab, generated);
+  bool omit_special_tokens = false;
+  std::string surface = decode(vocab, generated, omit_special_tokens);
   fprintf(stderr, "\n");
   fprintf(stderr, "surface: [%s]\n", surface.c_str());
 
