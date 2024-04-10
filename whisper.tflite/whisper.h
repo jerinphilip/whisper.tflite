@@ -1,5 +1,4 @@
-#ifndef _WHISPER_H_
-#define _WHISPER_H_
+#pragma once
 
 #include <cstdint>
 #include <map>
@@ -242,4 +241,3 @@ std::string decode(const Vocab& vocab, const std::vector<int64_t>& generated,
                    bool omit_special_tokens);
 
 }  // namespace whisper
-#endif  // _WHISPER_H_

@@ -17,7 +17,6 @@ limitations under the License.
 
 #include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <string>

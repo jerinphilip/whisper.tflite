@@ -1,5 +1,4 @@
-#ifndef _TFLITEENGINE_H_
-#define _TFLITEENGINE_H_
+#pragma once
 
 #include <string>
 #include <vector>
@@ -15,7 +14,7 @@ class TFLiteEngine {
 
   // NOLINTBEGIN(readability-identifier-naming)
   int create(const char* modelPath, const char* vocabPath, bool isMultilingual);
-  void destroy();
+  void destroy() const;
 
   std::string transcribe(std::vector<float> samples);
   std::string transcribe(const char* waveFile);
@@ -34,5 +33,3 @@ class TFLiteEngine {
   MmapFile vocab_file_;
 };
 }  // namespace whisper
-
-#endif  // _TFLITEENGINE_H_

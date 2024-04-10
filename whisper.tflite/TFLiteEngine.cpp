@@ -3,17 +3,19 @@
 #include <bits/types/struct_timeval.h>
 #include <sys/time.h>
 
+#include <cstdint>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "core/interpreter_builder.h"
 #include "core/model_builder.h"
+#include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "wav_util.h"
 #include "whisper.h"
@@ -168,7 +170,7 @@ std::string TFLiteEngine::transcribe(const char *waveFile) {
   return text;
 }
 
-void TFLiteEngine::destroy() {
+void TFLiteEngine::destroy() const {
   std::cout << "Entering " << __func__ << "()" << '\n';
 
   if (whisper_.buffer) {

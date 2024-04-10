@@ -1,6 +1,7 @@
 #include "wav_util.h"
 
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <ios>

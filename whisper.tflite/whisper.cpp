@@ -7,11 +7,24 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
+#include <iterator>
+#include <stdexcept>
+#include <string>
 #include <thread>
+#include <tuple>
+#include <utility>
 #include <vector>
 
+#include "tensorflow/lite/c/c_api_types.h"
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
