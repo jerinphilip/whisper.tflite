@@ -30,7 +30,9 @@ JNIEXPORT jint WTJ_JNI_EXPORT(WhisperEngineNative,
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<TFLiteEngine *>(nativePtr);
   const char *c_model_path = env->GetStringUTFChars(modelPath, nullptr);
+  fprintf(stderr, "model: %s\n", c_model_path);
   const char *c_vocab_path = env->GetStringUTFChars(vocabPath, nullptr);
+  fprintf(stderr, "vocab: %s\n", c_vocab_path);
   int result = engine->create(c_model_path, c_vocab_path, isMultilingual != 0U);
   env->ReleaseStringUTFChars(modelPath, c_model_path);
   return static_cast<jint>(result);

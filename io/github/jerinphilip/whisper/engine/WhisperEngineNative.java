@@ -25,7 +25,7 @@ public class WhisperEngineNative implements IWhisperEngine {
 
   @Override
   public boolean initialize(String modelPath, String vocabPath, boolean multilingual) {
-    int ret = loadModel(modelPath, multilingual);
+    int ret = loadModel(modelPath, vocabPath, multilingual);
     // Log.d(TAG, "Model is loaded..." + modelPath);
 
     mIsInitialized = true;
@@ -49,8 +49,8 @@ public class WhisperEngineNative implements IWhisperEngine {
     if (mUpdateListener != null) mUpdateListener.onUpdateReceived(message);
   }
 
-  private int loadModel(String modelPath, boolean isMultilingual) {
-    return loadModel(nativePtr, modelPath, isMultilingual);
+  private int loadModel(String modelPath, String vocabPath, boolean isMultilingual) {
+    return loadModel(nativePtr, modelPath, vocabPath, isMultilingual);
   }
 
   private void freeModel() {
@@ -65,7 +65,8 @@ public class WhisperEngineNative implements IWhisperEngine {
   // Native methods
   private native long createTFLiteEngine();
 
-  private native int loadModel(long nativePtr, String modelPath, boolean isMultilingual);
+  private native int loadModel(
+      long nativePtr, String modelPath, String vocabPath, boolean isMultilingual);
 
   private native void freeModel(long nativePtr);
 

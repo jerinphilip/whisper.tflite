@@ -147,7 +147,7 @@ std::string TFLiteEngine::transcribe(std::vector<float> samples) {
   // assume output dims to be something like (1, 1, ... ,size)
   auto output_size = output_dims->data[output_dims->size - 1];
   int *output_int = whisper_.interpreter->typed_output_tensor<int>(0);
-  bool omit_special_tokens = true;
+  bool omit_special_tokens = false;
   std::string text =
       decode(vocab_, output_int, output_int + output_size, omit_special_tokens);
 
