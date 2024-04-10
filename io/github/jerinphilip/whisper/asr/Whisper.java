@@ -1,7 +1,5 @@
 package io.github.jerinphilip.whisper.asr;
 
-import android.content.Context;
-import android.util.Log;
 import io.github.jerinphilip.whisper.engine.IWhisperEngine;
 import io.github.jerinphilip.whisper.engine.WhisperEngineNative;
 import java.io.File;
@@ -18,26 +16,20 @@ public class Whisper {
   public static final String MSG_PROCESSING_DONE = "Processing done...!";
   public static final String MSG_FILE_NOT_FOUND = "Input file doesn't exist..!";
 
-  private final Context mContext;
   private final AtomicBoolean mInProgress = new AtomicBoolean(false);
   private final Object mAudioBufferQueueLock = new Object(); // Synchronization object
   private final Object mWhisperEngineLock = new Object(); // Synchronization object
   private final Queue<float[]> audioBufferQueue = new LinkedList<>();
   private Thread mMicTranscribeThread = null;
 
-  // TODO: use WhisperEngine as per requirement
-  //    private final IWhisperEngine mWhisperEngine = new WhisperEngine();
   private final IWhisperEngine mWhisperEngine = new WhisperEngineNative();
-  //    private final IWhisperEngine mWhisperEngine = new WhisperEngineTwoModel();
 
   private String mAction = null;
   private String mWavFilePath = null;
   private Thread mExecutorThread = null;
   private IWhisperListener mUpdateListener = null;
 
-  public Whisper(Context context) {
-    mContext = context;
-  }
+  public Whisper() {}
 
   public void setListener(IWhisperListener listener) {
     mUpdateListener = listener;
@@ -51,7 +43,7 @@ public class Whisper {
       // Start thread for mic data transcription in realtime
       startMicTranscriptionThread();
     } catch (IOException e) {
-      Log.e(TAG, "Error...", e);
+      // Log.e(TAG, "Error...", e);
     }
   }
 
@@ -65,7 +57,7 @@ public class Whisper {
 
   public void start() {
     if (mInProgress.get()) {
-      Log.d(TAG, "Execution is already in progress...");
+      // Log.d(TAG, "Execution is already in progress...");
       return;
     }
 
@@ -109,7 +101,7 @@ public class Whisper {
     try {
       // Get Transcription
       if (mWhisperEngine.isInitialized()) {
-        Log.d(TAG, "WaveFile: " + mWavFilePath);
+        // Log.d(TAG, "WaveFile: " + mWavFilePath);
 
         File waveFile = new File(mWavFilePath);
         if (waveFile.exists()) {
@@ -126,7 +118,7 @@ public class Whisper {
           synchronized (mWhisperEngineLock) {
             String result = mWhisperEngine.transcribeFile(mWavFilePath);
             sendResult(result);
-            Log.d(TAG, "Result len: " + result.length() + ", Result: " + result);
+            // Log.d(TAG, "Result len: " + result.length() + ", Result: " + result);
           }
 
           sendUpdate(MSG_PROCESSING_DONE);
@@ -134,13 +126,13 @@ public class Whisper {
           // Calculate time required for transcription
           long endTime = System.currentTimeMillis();
           long timeTaken = endTime - startTime;
-          Log.d(TAG, "Time Taken for transcription: " + timeTaken + "ms");
+          // Log.d(TAG, "Time Taken for transcription: " + timeTaken + "ms");
         } else {
           sendUpdate(MSG_FILE_NOT_FOUND);
         }
       }
     } catch (Exception e) {
-      Log.e(TAG, "Error...", e);
+      // Log.e(TAG, "Error...", e);
       sendUpdate(e.getMessage());
     }
   }

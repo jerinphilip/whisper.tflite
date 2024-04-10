@@ -1,6 +1,5 @@
 package io.github.jerinphilip.whisper.utils;
 
-import android.util.Log;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -46,7 +45,7 @@ public class WaveUtil {
       fileOutputStream.close();
     } catch (IOException e) {
       e.printStackTrace();
-      Log.e(TAG, "Error...", e);
+      // Log.e(TAG, "Error...", e);
     }
   }
 
@@ -101,7 +100,7 @@ public class WaveUtil {
       return samples;
     } catch (IOException e) {
       e.printStackTrace();
-      Log.e(TAG, "Error...", e);
+      // Log.e(TAG, "Error...", e);
     }
     return new float[0];
   }

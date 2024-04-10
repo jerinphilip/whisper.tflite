@@ -1,6 +1,5 @@
 package io.github.jerinphilip.whisper.engine;
 
-import android.util.Log;
 import io.github.jerinphilip.whisper.asr.IWhisperListener;
 
 public class WhisperEngineNative implements IWhisperEngine {
@@ -27,7 +26,7 @@ public class WhisperEngineNative implements IWhisperEngine {
   @Override
   public boolean initialize(String modelPath, String vocabPath, boolean multilingual) {
     int ret = loadModel(modelPath, multilingual);
-    Log.d(TAG, "Model is loaded..." + modelPath);
+    // Log.d(TAG, "Model is loaded..." + modelPath);
 
     mIsInitialized = true;
     return true;
