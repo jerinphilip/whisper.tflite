@@ -10,17 +10,45 @@ towards that. This is currently exported via a [rube-goldberg
 machine](https://en.wikipedia.org/wiki/Rube_Goldberg_machine) of PyTorch ->
 ONNX -> TF -> TFLite. I'm exploring avenues to simplify. 
 
+There are conceptually leaner ways to accomplish what's being done here. This
+repository houses an approach that plays fast and loose.
+
+### Build
+
+Clone sources including submodules locally.
 
 ```bash 
 git clone --recursive https://github.com/jerinphilip/whisper.tflite.git
+```
 
+**`tensorflow-lite_flex`** Since some ops that are not standard are added while
+doing tflite conversion, the `tensorflowlite_flex.so` library is required to be
+built. The only way I found online requires using bazel.
+
+
+
+```bash
+bazel build -c opt \
+    --config=monolithic \
+    tensorflow/lite/delegates/flex:tensorflowlite_flex
+```
+
+Once built, this can be adjusted in
+[`whisper.tflite/CMakeLists.txt`](./whisper.tflite/CMakeLists.txt).
+
+```
 # Configure cmake, adjust parallel according to your system.  
 cmake -B build -S .  
 cmake --build build --target all --parallel 28 
 ```
 
-A plan is to run this locally on my android phone through the GPU or optimized
-CPU. Possible to take advantage of the following?
+Note that the above builds tensorflow (`tensorflow-lite` in particular), which
+takes some time and resources. You may alternatively [trust a precompiled
+binary](https://github.com/nyadla-sys/whisper.tflite/tree/5eaa87f3af07e580d6b79172433e460fca017224/whisper_android/app/src/main/cpp/tf-lite-api/generated-libs)
+and use it as an imported target.
+
+**Android GPU(?)** A plan is to run this locally on my android phone through
+the GPU or optimized CPU. Possible to take advantage of the following?
 
 ```groovy
 ...
@@ -35,6 +63,19 @@ dependencies {
 
 Maybe I can use this using [this](https://stackoverflow.com/a/55144057/4565794) resource?
 
+### Differences
+
+* Some extra Java code for using TFLite via Java is removed.
+* Android stuff (`Context`, `Log`, `MediaRecorder` etc) are removed so that the
+  JNI bridge can be tested in isolation here also providing a faster
+  development feedback loop.
+* The vocabulary (data) hardcoded in source is configured to be supplied externally.
+* Support for [single tflite](https://colab.research.google.com/github/usefulsensors/openai-whisper/blob/main/notebooks/generate_tflite_from_whisper.ipynb)
+  and [encoder-decoder](https://colab.research.google.com/github/usefulsensors/openai-whisper/blob/main/notebooks/whisper_encoder_decoder_tflite.ipynb)
+  variations. There are possibly better ways to do this - my German model I could
+  export only using the latter method and figured writing C++ code is shorter in
+  development time.
+ 
 ### Resources
 
 * [tflite build using cmake](https://www.tensorflow.org/lite/guide/build_cmake)
