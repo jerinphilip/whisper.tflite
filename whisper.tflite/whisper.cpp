@@ -1,7 +1,11 @@
 #include "whisper.h"
 
 #include <bits/types/struct_timeval.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/time.h>
+#include <unistd.h>
 
 #include <cmath>
 #include <iostream>
@@ -11,6 +15,7 @@
 #include "tensorflow/lite/core/interpreter.h"
 #include "tensorflow/lite/core/interpreter_builder.h"
 #include "tensorflow/lite/core/model_builder.h"
+
 namespace whisper {
 
 // Print a vector of float values
@@ -536,6 +541,8 @@ char* Reader::read_vocab(Vocab& vocab, char* head) {
   // Update the vocabulary size based on whisper.h
   vocab.n_vocab = n_vocab;
   printf("\nn_vocab:%d\n", static_cast<int>(n_vocab));
+
+  // TODO(@jerinphilip): Specialization, fix somehow.
   transform_vocab_multilingual(vocab);
 
   // Assuming a maximum word length of 255 characters
@@ -558,6 +565,81 @@ char* Reader::read_vocab(Vocab& vocab, char* head) {
 void Reader::read(Filters& filters, Vocab& vocab) {
   head_ = read_filters(filters, head_);
   head_ = read_vocab(vocab, head_);
+}
+
+std::string remove_extra_spaces(const std::string& input) {
+  std::string result;
+  result.reserve(input.length());
+  bool space = false;
+
+  for (char c : input) {
+    if (c == ' ') {
+      if (!space) {
+        result += c;
+      }
+      space = true;
+    } else {
+      result += c;
+      space = false;
+    }
+  }
+
+  return result;
+}
+
+MmapFile::MmapFile(const std::string& filepath) {
+  fd_ = open(filepath.c_str(), O_RDONLY);
+  if (fd_ == -1) {
+    throw std::runtime_error("Failed to open file: " + filepath);
+  }
+
+  struct stat st;
+  if (fstat(fd_, &st) == -1) {
+    close(fd_);
+    throw std::runtime_error("Failed to get file size: " + filepath);
+  }
+  size_ = st.st_size;
+
+  data_ = mmap(nullptr, size_, PROT_READ, MAP_PRIVATE, fd_, 0);
+  if (data_ == MAP_FAILED) {  // NOLINT
+    close(fd_);
+    throw std::runtime_error("Failed to mmap file: " + filepath);
+  }
+}
+
+MmapFile::~MmapFile() {
+  if (data_ != nullptr) {
+    munmap(data_, size_);
+  }
+  if (fd_ != -1) {
+    close(fd_);
+  }
+}
+
+MmapFile::MmapFile(MmapFile&& from) noexcept
+    : fd_(from.fd_), data_(from.data_), size_(from.size_) {
+  from.reset();
+}
+
+MmapFile& MmapFile::operator=(MmapFile&& from) noexcept {
+  if (this == &from) {
+    return *this;
+  }
+  consume(from);
+  return *this;
+}
+
+void MmapFile::consume(MmapFile& from) {
+  fd_ = (from.fd_);
+  data_ = (from.data_);
+  size_ = (from.size_);
+  from.reset();
+}
+
+void MmapFile::reset() {
+  fd_ = -1;
+  data_ = nullptr;
+  size_ = 0;
 }
 
 }  // namespace whisper

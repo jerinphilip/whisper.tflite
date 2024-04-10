@@ -50,29 +50,6 @@ int TFLiteEngine::loadModel(const char *modelPath, const char *vocabPath,
     const char *vocab_data =
         reinterpret_cast<const char *>(vocab_holder_.get());
 
-    // Vocab file layout.
-    //
-    // VocabBin {
-    //    int magic; // 32-bit?  == 0x5753052
-    //    filters {
-    //      n_mel;
-    //      n_fft;
-    //      data [ n_mel x n_fft ];
-    //    }
-    //    vocab {
-    //      n_vocab;
-    //      { token-length <token> } [ n_vocab]
-    //    }
-    //
-    //    extra-vocab {
-    //        EOT // "[_EOT_]"
-    //        SOT // "[_SOT_]
-    //        PREV // "[_PREV_]
-    //        NOT // "[_NOT_]
-    //        BEG // "[_BEG_]
-    //    }
-    // };
-    // Read the magic number
     int magic = 0;
     std::memcpy(&magic, vocab_data, sizeof(magic));
     vocab_data += sizeof(magic);

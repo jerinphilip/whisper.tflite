@@ -21,8 +21,11 @@ namespace whisper {
 // Constants
 static constexpr int kNumGoldenGeneratedIDs = 21;
 static constexpr int kGoldenGeneratedIDs[kNumGoldenGeneratedIDs] = {
-    50257, 50362, 1770, 13, 2264, 346, 353, 318,  262, 46329, 286,
-    262,   3504,  6097, 11, 290,  356, 389, 9675, 284, 7062};
+    50257, 50362,                                              //
+    1770,  13,    2264, 346, 353, 318, 262,  46329, 286, 262,  //
+    3504,  6097,  11,   290, 356, 389, 9675, 284,   7062       //
+};
+
 static constexpr int kSampleRate = 16000;
 static constexpr int kNFFT = 400;
 static constexpr int kNMEL = 80;
@@ -60,16 +63,16 @@ struct Vocab {
                                      //
   // language-tags come here.
   // https://github.com/openai/whisper/blob/ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab/whisper/tokenizer.py#L10
-  // [50258 ... 50358] = 100 languages
+  // [50259 ... 50358] = 099 languages
   //
-  //  en                  = 50258
-  //  zh                  = 50259
-  //  de                  = 50260
-  //  es                  = 50262
-  //  ru                  = 50263
-  //  ko                  = 50264
-  //  fr                  = 50265
-  //  ja                  = 50266
+  //  en                  = 50259
+  //  zh                  = 50260
+  //  de                  = 50261
+  //  es                  = 50263
+  //  ru                  = 50264
+  //  ko                  = 50265
+  //  fr                  = 50266
+  //  ja                  = 50267
   //  ..                  = ...
   //
   // Perhaps this is also detected?
@@ -164,6 +167,28 @@ void inspect_tflite_tensor(const char* name, const TfLiteTensor& tensor);
 // https://github.com/openai/whisper/blob/ba3f3cd54b0e5b8ce1ab3de13e32122d0d5f98ab/whisper/tokenizer.py#L10
 int language_id(const std::string& code);
 
+// Vocab file layout.
+//
+// VocabBin {
+//    int magic; // 32-bit?  == 0x5753052
+//    filters {
+//      n_mel;
+//      n_fft;
+//      data [ n_mel x n_fft ];
+//    }
+//    vocab {
+//      n_vocab;
+//      { token-length <token> } [ n_vocab]
+//    }
+//
+//    extra-vocab {
+//        EOT // "[_EOT_]"
+//        SOT // "[_SOT_]
+//        PREV // "[_PREV_]
+//        NOT // "[_NOT_]
+//        BEG // "[_BEG_]
+//    }
+// };
 struct Reader {
  public:
   explicit Reader(char* head) : head_(head) {}
@@ -173,6 +198,34 @@ struct Reader {
   static char* read_filters(Filters& filters, char* head);
   static char* read_vocab(Vocab& vocab, char* head);
   char* head_;
+};
+
+std::string remove_extra_spaces(const std::string& input);
+
+class MmapFile {
+ public:
+  MmapFile() = default;
+  explicit MmapFile(const std::string& filepath);
+  ~MmapFile();
+
+  void* data() const { return data_; }
+  size_t size() const { return size_; }
+
+  // Disable copy and assignment
+  MmapFile(const MmapFile&) = delete;
+  MmapFile& operator=(const MmapFile&) = delete;
+
+  MmapFile(MmapFile&& from) noexcept;
+
+  MmapFile& operator=(MmapFile&& from) noexcept;
+
+ private:
+  void consume(MmapFile& from);
+  void reset();
+
+  int fd_ = -1;
+  void* data_ = nullptr;
+  size_t size_ = 0;
 };
 
 }  // namespace whisper

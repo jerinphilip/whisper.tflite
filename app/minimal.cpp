@@ -30,26 +30,6 @@ limitations under the License.
 #include "whisper.tflite/wav_util.h"
 #include "whisper.tflite/whisper.h"
 
-std::string remove_extra_spaces(const std::string& input) {
-  std::string result;
-  result.reserve(input.length());
-  bool space = false;
-
-  for (char c : input) {
-    if (c == ' ') {
-      if (!space) {
-        result += c;
-      }
-      space = true;
-    } else {
-      result += c;
-      space = false;
-    }
-  }
-
-  return result;
-}
-
 int main(int argc, char* argv[]) {
   if (argc != 4) {
     fprintf(stderr,
