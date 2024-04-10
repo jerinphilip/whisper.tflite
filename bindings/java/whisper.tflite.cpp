@@ -7,7 +7,7 @@
 #include "TFLiteEngine.h"
 
 #define WTJ_JNI_EXPORT(cls, fn) \
-  JNICALL Java_io_github_jerinphilip_whisper_##cls##_##fn
+  JNICALL Java_io_github_jerinphilip_whisper_engine_##cls##_##fn
 
 // NOLINTNEXTLINE
 using namespace whisper;
