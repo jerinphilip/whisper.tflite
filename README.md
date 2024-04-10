@@ -11,10 +11,13 @@ machine](https://en.wikipedia.org/wiki/Rube_Goldberg_machine) of PyTorch ->
 ONNX -> TF -> TFLite. I'm exploring avenues to simplify. 
 
 
-```bash git clone --recursive https://github.com/jerinphilip/whisper.tflite.git
+```bash 
+git clone --recursive https://github.com/jerinphilip/whisper.tflite.git
 
-# Configure cmake, adjust parallel according to your system.  cmake -B build -S
-.  cmake --build build --target all --parallel 28 ```
+# Configure cmake, adjust parallel according to your system.  
+cmake -B build -S .  
+cmake --build build --target all --parallel 28 
+```
 
 A plan is to run this locally on my android phone through the GPU or optimized
 CPU. Possible to take advantage of the following?
