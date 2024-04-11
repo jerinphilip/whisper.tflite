@@ -12,3 +12,5 @@ build
 
 # Java Class files
 *.class
+
+deps/prebuilt

@@ -25,12 +25,22 @@ git clone --recursive https://github.com/jerinphilip/whisper.tflite.git
 doing tflite conversion, the `tensorflowlite_flex.so` library is required to be
 built. The only way I found online requires using bazel.
 
-
-
 ```bash
-bazel build -c opt \
-    --config=monolithic \
-    tensorflow/lite/delegates/flex:tensorflowlite_flex
+cd deps/tensorflow
+
+TARGETS=(
+    //tensorflow/lite:libtensorflowlite.so 
+    //tensorflow/lite/delegates/flex:libtensorflowlite_flex.so
+)
+
+# Build for x86-64 (monolithic?) and android_arm64
+bazel build -c opt --config=monolithic  "${TARGETS[@]}"
+bazel build -c opt --config=android_arm64  "${TARGETS[@]}"
+
+# Look for tensorflowlite, tensorflowlite_flex shared objects (.so)
+find -L -iname "*.so" | grep "tensorflowlite"
+
+# Copy select .so to deps/prebuilt
 ```
 
 Once built, this can be adjusted in
