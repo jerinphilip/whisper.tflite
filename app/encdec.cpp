@@ -19,7 +19,6 @@ limitations under the License.
 #include <string>
 
 #include "CLI11/CLI11.hpp"
-#define DR_WAV_IMPLEMENTATION
 #include "whisper.tflite/whisper.h"
 
 struct Options {
