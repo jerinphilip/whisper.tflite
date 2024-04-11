@@ -1,6 +1,5 @@
 package io.github.jerinphilip.whisper;
 
-
 class Driver {
   public static void main(String args[]) {
     System.out.println("Hello World!");
@@ -22,8 +21,7 @@ class Driver {
     System.out.println("vocabPath: " + vocabPath);
     System.out.println("multilingual: " + Boolean.toString(multilingual));
 
-    EngineNative engine =
-        new EngineNative(engineType, modelPath, vocabPath, multilingual);
+    EngineNative engine = new EngineNative(engineType, modelPath, vocabPath, multilingual);
     String transcription = engine.transcribe(audioFilePath);
     System.out.println("transcription: " + transcription);
   }
