@@ -7,7 +7,7 @@
 #include <vector>
 
 #define WTJ_JNI_EXPORT(cls, fn) \
-  JNICALL Java_io_github_jerinphilip_whisper_engine_##cls##_##fn
+  JNICALL Java_io_github_jerinphilip_whisper_##cls##_##fn
 
 // NOLINTNEXTLINE
 using namespace whisper;
@@ -15,7 +15,7 @@ using namespace whisper;
 extern "C" {
 
 // JNI method to load the model
-JNIEXPORT jlong WTJ_JNI_EXPORT(WhisperEngineNative,
+JNIEXPORT jlong WTJ_JNI_EXPORT(EngineNative,
                                create)(JNIEnv *env, jobject /*thiz*/,
                                        jlong engineType, jstring modelPath,
                                        jstring vocabPath,
@@ -34,16 +34,16 @@ JNIEXPORT jlong WTJ_JNI_EXPORT(WhisperEngineNative,
 }
 
 // JNI method to free the model
-JNIEXPORT void WTJ_JNI_EXPORT(WhisperEngineNative, destroy)(JNIEnv * /*env*/,
-                                                            jobject /*thiz*/,
-                                                            jlong nativePtr) {
+JNIEXPORT void WTJ_JNI_EXPORT(EngineNative, destroy)(JNIEnv * /*env*/,
+                                                     jobject /*thiz*/,
+                                                     jlong nativePtr) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<Engine *>(nativePtr);
   delete engine;
 }
 
 // JNI method to transcribe audio buffer
-JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative, transcribeBuffer)(
+JNIEXPORT jstring WTJ_JNI_EXPORT(EngineNative, transcribeBuffer)(
     JNIEnv *env, jobject /*thiz*/, jlong nativePtr, jfloatArray samples) {
   // NOLINTNEXTLINE(performance-no-int-to-ptr)
   auto *engine = reinterpret_cast<Engine *>(nativePtr);
@@ -59,7 +59,7 @@ JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative, transcribeBuffer)(
 }
 
 // JNI method to transcribe audio file
-JNIEXPORT jstring WTJ_JNI_EXPORT(WhisperEngineNative,
+JNIEXPORT jstring WTJ_JNI_EXPORT(EngineNative,
                                  transcribeFile)(JNIEnv *env, jobject /*thiz*/,
                                                  jlong nativePtr,
                                                  jstring waveFile) {

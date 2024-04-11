@@ -1,6 +1,7 @@
 #include "whisper.h"
 
 #include <bits/types/struct_timeval.h>
+#include <math.h>
 #include <sys/time.h>
 
 #include <algorithm>

@@ -14,16 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <cstdint>
-#include <cstdio>
 #include <cstdlib>
-#include <memory>
+#include <iostream>
 #include <string>
-#include <vector>
 
 #include "CLI11/CLI11.hpp"
-#define DR_WAV_IMPLEMENTATION
-#include "whisper.tflite/wav_util.h"
 #include "whisper.tflite/whisper.h"
 
 struct Options {

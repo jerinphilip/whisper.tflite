@@ -1,14 +1,11 @@
-package io.github.jerinphilip.whisper.engine;
+package io.github.jerinphilip.whisper;
 
-import io.github.jerinphilip.whisper.asr.IWhisperListener;
-
-public class WhisperEngineNative implements IWhisperEngine {
-  private final String TAG = "WhisperEngineNative";
+public class EngineNative implements IWhisperEngine {
+  private final String TAG = "EngineNative";
   private final long nativePtr; // Native pointer to the TFLiteEngine instance
   private IWhisperListener mUpdateListener = null;
 
-  public WhisperEngineNative(
-      long engineType, String modelPath, String vocabPath, boolean multilingual) {
+  public EngineNative(long engineType, String modelPath, String vocabPath, boolean multilingual) {
     nativePtr = create(engineType, modelPath, vocabPath, multilingual);
   }
 
