@@ -1,4 +1,4 @@
-package io.github.jerinphilip.whisper.utils;
+package io.github.jerinphilip.whisper;
 
 import static java.lang.Math.cos;
 import static java.lang.Math.log10;

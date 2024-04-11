@@ -1,6 +1,5 @@
-package io.github.jerinphilip.whisper.engine;
+package io.github.jerinphilip.whisper;
 
-import io.github.jerinphilip.whisper.asr.IWhisperListener;
 
 public interface IWhisperEngine {
   void setUpdateListener(IWhisperListener listener);

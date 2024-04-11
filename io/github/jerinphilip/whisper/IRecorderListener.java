@@ -1,4 +1,4 @@
-package io.github.jerinphilip.whisper.asr;
+package io.github.jerinphilip.whisper;
 
 public interface IRecorderListener {
   void onUpdateReceived(String message);

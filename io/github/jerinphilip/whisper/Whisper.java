@@ -1,7 +1,5 @@
-package io.github.jerinphilip.whisper.asr;
+package io.github.jerinphilip.whisper;
 
-import io.github.jerinphilip.whisper.engine.IWhisperEngine;
-import io.github.jerinphilip.whisper.engine.WhisperEngineNative;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -37,7 +35,7 @@ public class Whisper {
 
   public void loadModel(
       long engineType, String modelPath, String vocabPath, boolean isMultilingual) {
-    mWhisperEngine = new WhisperEngineNative(engineType, modelPath, vocabPath, isMultilingual);
+    mWhisperEngine = new EngineNative(engineType, modelPath, vocabPath, isMultilingual);
 
     // Start thread for mic data transcription in realtime
     startMicTranscriptionThread();

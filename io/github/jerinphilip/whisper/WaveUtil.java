@@ -1,4 +1,4 @@
-package io.github.jerinphilip.whisper.utils;
+package io.github.jerinphilip.whisper;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
