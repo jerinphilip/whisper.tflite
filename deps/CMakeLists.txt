@@ -5,6 +5,10 @@ set(TENSORFLOWLITE_INCLUDE_DIRECTORIES
     "${CMAKE_CURRENT_SOURCE_DIR}/tensorflow/tensorflow/lite"
     "${CMAKE_CURRENT_SOURCE_DIR}/flatbuffers/include")
 
+if(ANDROID)
+  set(TENSORFLOWLITE_SUFFIX "android/${ANDROID_ABI}")
+endif(ANDROID)
+
 foreach(TFLIB ${TENSORFLOWLITE_LIBS})
   add_library(${TFLIB} SHARED IMPORTED)
   set_target_properties(

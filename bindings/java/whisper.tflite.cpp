@@ -1,7 +1,6 @@
 #include "whisper.h"
 
 #include <jni.h>
-#include <jni_md.h>
 
 #include <string>
 #include <vector>
