@@ -41,37 +41,39 @@ bazel build -c opt --config=android_arm64  "${TARGETS[@]}"
 find -L -iname "*.so" | grep "tensorflowlite"
 
 # Copy select .so to deps/prebuilt
+tree deps/prebuilt
+# deps/prebuilt
+# ├── android
+# │   └── arm64-v8a
+# │       ├── libtensorflowlite_flex.so
+# │       └── libtensorflowlite.so
+# └── x86_64
+#     ├── libtensorflowlite_flex.so
+#     └── libtensorflowlite.so
+
 ```
 
-Once built, this can be adjusted in
-[`whisper.tflite/CMakeLists.txt`](./whisper.tflite/CMakeLists.txt).
-
-```
-# Configure cmake, adjust parallel according to your system.  
-cmake -B build -S .  
-cmake --build build --target all --parallel 28 
-```
-
-Note that the above builds tensorflow (`tensorflow-lite` in particular), which
-takes some time and resources. You may alternatively [trust a precompiled
+You may alternatively [trust a precompiled
 binary](https://github.com/nyadla-sys/whisper.tflite/tree/5eaa87f3af07e580d6b79172433e460fca017224/whisper_android/app/src/main/cpp/tf-lite-api/generated-libs)
-and use it as an imported target.
+and use it as an imported target. 
 
-**Android GPU(?)** A plan is to run this locally on my android phone through
-the GPU or optimized CPU. Possible to take advantage of the following?
+I use the following scripts to build:
 
-```groovy
-...
-dependencies {
-    ...
-    implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:0.0.0-nightly-SNAPSHOT'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT'
-    ...
-}
+```
+bash scripts/build.sh # x86-64 linux desktop
+
+# Test build encdec and monolith, also covering library.
+bash scripts/run.sh <sample-no> 
+
+# Compiles the java module and runs a driver to test.
+bash scripts/run-java.sh 
+
+# Build libraries for export into android-app
+bash scripts/build-android.sh # arm-v8a android
 ```
 
-Maybe I can use this using [this](https://stackoverflow.com/a/55144057/4565794) resource?
+Check the scripts to make a sense of specific commands required to run, these
+are not intended to work out of the box and will need adapting to your setup.
 
 ### Differences
 
